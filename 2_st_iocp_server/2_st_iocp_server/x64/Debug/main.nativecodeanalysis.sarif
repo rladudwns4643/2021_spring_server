@@ -1,0 +1,908 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "ruleId": "C26812",
+          "message": {
+            "text": "열거형 형식 'OP_TYPE'이(가) 범위가 지정되지 않았습니다. 'enum'(Enum.3) 대신 'enum class'를 사용하세요."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                },
+                "region": {
+                  "startLine": 38,
+                  "startColumn": 2,
+                  "endLine": 38,
+                  "endColumn": 17
+                }
+              },
+              "logicalLocations": [
+                {
+                  "decoratedName": "?send_packet@@YAXHPEAX@Z",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "suppressions": []
+        },
+        {
+          "ruleId": "C6031",
+          "message": {
+            "text": "반환 값이 무시되었습니다. 'WSAStartup'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                },
+                "region": {
+                  "startLine": 140,
+                  "startColumn": 2,
+                  "endLine": 140,
+                  "endColumn": 30
+                }
+              },
+              "logicalLocations": [
+                {
+                  "decoratedName": "main",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "suppressions": []
+        },
+        {
+          "ruleId": "C6387",
+          "message": {
+            "text": "'_Param_(7)'이(가) '0'일 수 있습니다.  이 경우 'AcceptEx' 함수의 사양과 일치하지 않습니다. "
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                },
+                "region": {
+                  "startLine": 159,
+                  "startColumn": 2,
+                  "endLine": 159,
+                  "endColumn": 90
+                }
+              },
+              "logicalLocations": [
+                {
+                  "decoratedName": "main",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 138,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 138,
+                            "startColumn": 20
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 138,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 138,
+                            "startColumn": 7
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 138,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 139,
+                            "startColumn": 10
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 140,
+                            "startColumn": 12
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 142,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 144,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 145,
+                            "startColumn": 24
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 147,
+                            "startColumn": 14
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 148,
+                            "startColumn": 8
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 149,
+                            "startColumn": 24
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 150,
+                            "startColumn": 22
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 151,
+                            "startColumn": 34
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 152,
+                            "startColumn": 8
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 153,
+                            "startColumn": 8
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 155,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 156,
+                            "startColumn": 19
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 157,
+                            "startColumn": 2
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 158,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 159,
+                            "startColumn": 10
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": []
+        },
+        {
+          "ruleId": "C6387",
+          "message": {
+            "text": "'h_iocp'이(가) '0'일 수 있습니다.  이 경우 'GetQueuedCompletionStatus' 함수의 사양과 일치하지 않습니다. "
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                },
+                "region": {
+                  "startLine": 166,
+                  "startColumn": 8,
+                  "endLine": 166,
+                  "endColumn": 77
+                }
+              },
+              "logicalLocations": [
+                {
+                  "decoratedName": "main",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 138,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 138,
+                            "startColumn": 20
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 138,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 138,
+                            "startColumn": 7
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 138,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 139,
+                            "startColumn": 10
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 140,
+                            "startColumn": 12
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 142,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "'h_iocp'은(는) NULL일 수 있습니다."
+                        }
+                      },
+                      "kinds": [
+                        "선언"
+                      ],
+                      "importance": "essential"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 144,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 145,
+                            "startColumn": 24
+                          }
+                        },
+                        "message": {
+                          "text": "'h_iocp'은(는) 'CreateIoCompletionPort'(c:\\program files (x86)\\windows kits\\10\\include\\10.0.18362.0\\um\\ioapiset.h:32에서 선언됨)에 대한 입력입니다."
+                        }
+                      },
+                      "kinds": [
+                        "사용법"
+                      ],
+                      "importance": "important"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 147,
+                            "startColumn": 14
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 148,
+                            "startColumn": 8
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 149,
+                            "startColumn": 24
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 150,
+                            "startColumn": 22
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 151,
+                            "startColumn": 34
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 152,
+                            "startColumn": 8
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 153,
+                            "startColumn": 8
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 155,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 156,
+                            "startColumn": 19
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 157,
+                            "startColumn": 2
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 158,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 159,
+                            "startColumn": 10
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 161,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "이 루프 시작, ('1' 가정)"
+                        }
+                      },
+                      "kinds": [
+                        "분기"
+                      ],
+                      "importance": "important"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 162,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 163,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 164,
+                            "startColumn": 18
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 166,
+                            "startColumn": 8
+                          }
+                        },
+                        "message": {
+                          "text": "'h_iocp'은(는) 'GetQueuedCompletionStatus'(c:\\program files (x86)\\windows kits\\10\\include\\10.0.18362.0\\um\\ioapiset.h:43에서 선언됨)에 대한 입력입니다."
+                        }
+                      },
+                      "kinds": [
+                        "사용법"
+                      ],
+                      "importance": "important"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+                          },
+                          "region": {
+                            "startLine": 166,
+                            "startColumn": 8
+                          }
+                        },
+                        "message": {
+                          "text": "'h_iocp'은(는) NULL(이)면 안 됩니다. 이는 'GetQueuedCompletionStatus'의 SAL 주석과 일치하지 않습니다."
+                        }
+                      },
+                      "kinds": [
+                        "사용법"
+                      ],
+                      "importance": "essential"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": []
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "PREfast",
+          "fullName": "PREfast Code Analysis",
+          "version": "14.28.29912.0",
+          "informationUri": "https://aka.ms/cpp/ca"
+        }
+      },
+      "invocations": [
+        {
+          "commandLine": "\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.28.29910\\bin\\HostX86\\x64\\c1xx.dll\" -ACf{1F7B090C-16DB-4822-966A-A93D26ED4681} -ACpmspft140.dll -Alint -D_PREFAST_ -D_AST_FE_ -Analyze -zm0x003AB1C0 -il C:\\Users\\t1sna\\AppData\\Local\\Temp\\_CL_40144732ast -typedil -f main.cpp -Ze -D_MSC_EXTENSIONS -Zp16 -pc \\:/ -D_MSC_VER=1928 -D_MSC_FULL_VER=192829912 -D_MSC_BUILD=0 -D_M_AMD64=100 -ZILP448 -D_M_X64=100 -D_WIN64 -D_WIN32 -GR -D_CPPRTTI -nologo -W 3 -diagnostics:column -D_GUARDOVERFLOW_CRT_ALLOCATORS=1 -Ot -DCODE_ANALYSIS -D_DEBUG -D_CONSOLE -D_UNICODE -DUNICODE -EHs -D_CPPUNWIND -EHc -D__MSVC_RUNTIME_CHECKS -RTCs -RTCu -MDd -D_DEBUG -D_MT -D_DLL -GS -D_M_FP_PRECISE -permissive- -Zc:wchar_t -Zc:forScope -Fox64\\Debug\\main.obj -Fdx64\\Debug\\vc142.pdb -Gd -analyze:projectdirectory C:\\Users\\t1sna\\OneDrive\\Project\\2021_spring_server\\2_st_iocp_server\\2_st_iocp_server -analyze:rulesetdirectory ;C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Team Tools\\Static Analysis Tools\\\\Rule Sets; -analyze:ruleset C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Team Tools\\Static Analysis Tools\\Rule Sets\\NativeRecommendedRules.ruleset -analyze:quiet -analyze:plugin C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.28.29910\\bin\\HostX86\\x86\\EspXEngine.dll -FC -errorreport:prompt -I C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.28.29910\\include -I C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.28.29910\\atlmfc\\include -I C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Auxiliary\\VS\\include -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\ucrt -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\um -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\shared -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\winrt -I C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.18362.0\\cppwinrt -I C:\\Program Files (x86)\\Windows Kits\\NETFXSDK\\4.8\\Include\\um",
+          "executionSuccessful": true
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "file:///C:/Users/t1sna/OneDrive/Project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/main.cpp"
+          },
+          "roles": [
+            "analysisTarget",
+            "resultFile"
+          ],
+          "hashes": {
+            "md5": "ee72ad48499331249a0b9b68f1d2f591"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/t1sna/onedrive/project/2021_spring_server/2_st_iocp_server/2_st_iocp_server/protocol.h"
+          },
+          "hashes": {
+            "md5": "cfe83d86a923960889a390d7c404af29"
+          }
+        }
+      ]
+    }
+  ]
+}
