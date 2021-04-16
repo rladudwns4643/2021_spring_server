@@ -4,6 +4,7 @@
 using namespace std;
 #include <WS2tcpip.h>
 #include <MSWSock.h>
+#include <thread>
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "MSWSock.lib")
 #include "protocol.h"
@@ -15,6 +16,8 @@ struct EXOVER {
 	WSABUF			m_wsaBuf[1];
 	unsigned char	m_iobuf[MAX_BUFFER]; //netbuf, packetbuf ...
 	OP_TYPE			m_op;
+
+	SOCKET			m_socket; //for accept
 };
 
 struct SESSION {
@@ -31,6 +34,7 @@ struct SESSION {
 
 unordered_map <int, SESSION> players;
 
+constexpr int MAX_THREAD = 4;
 
 void display_error(const char* msg, int err_no) {
 	WCHAR* lpMsgBuf;
@@ -167,31 +171,7 @@ void disconnect(int p_id) {
 	}
 }
 
-int main()
-{
-	wcout.imbue(locale("korean"));
-	WSADATA WSAData;
-	WSAStartup(MAKEWORD(2, 2), &WSAData);
-
-	HANDLE h_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, NULL, NULL);
-
-	SOCKET listenSocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
-	CreateIoCompletionPort(reinterpret_cast<HANDLE>(listenSocket), h_iocp, 0, NULL);//0번이 listen socket
-
-	SOCKADDR_IN serverAddr;
-	memset(&serverAddr, 0, sizeof(SOCKADDR_IN));
-	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons(SERVER_PORT);
-	serverAddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
-	::bind(listenSocket, (struct sockaddr*)&serverAddr, sizeof(SOCKADDR_IN));
-	listen(listenSocket, SOMAXCONN);
-
-	EXOVER accept_over;
-	accept_over.m_op = OP_ACCEPT;
-	ZeroMemory(&accept_over.m_over, sizeof(accept_over.m_over));
-	SOCKET client_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
-	AcceptEx(listenSocket, client_socket, accept_over.m_iobuf, 0, 32, 32, NULL, &accept_over.m_over);
-
+void worker(HANDLE h_iocp, SOCKET listen_socket) {
 	while (true) {
 		DWORD io_bytes;
 		ULONG_PTR iocp_key;
@@ -247,11 +227,11 @@ int main()
 				p.m_id = client_id;
 				p.m_name[0] = 0;
 				p.m_recv_over.m_op = OP_RECV;
-				p.m_socket = client_socket;
+				p.m_socket = ex_over->m_socket;
 				p.m_prev_size = 0;
 				p.x = 0;
 				p.y = 0;
-				CreateIoCompletionPort(reinterpret_cast<HANDLE>(client_socket), h_iocp, client_id, 0);
+				CreateIoCompletionPort(reinterpret_cast<HANDLE>(p.m_socket), h_iocp, client_id, 0);
 
 				for (auto& p : players) {
 					if (p.second.m_id != client_id) {
@@ -263,19 +243,55 @@ int main()
 				do_recv(client_id);
 			}
 			else {
-				closesocket(client_socket);
+				closesocket(players[client_id].m_socket);
 			}
 
 			//accpet 진행되면 새로운 accept 생성
-			ZeroMemory(&accept_over.m_over, sizeof(accept_over.m_over));
-			client_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
-			AcceptEx(listenSocket, client_socket, accept_over.m_iobuf, 0, 32, 32, NULL, &accept_over.m_over);
+			ZeroMemory(&ex_over->m_over, sizeof(ex_over->m_over));
+			SOCKET client_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+			AcceptEx(listen_socket, client_socket, ex_over->m_iobuf, 0, 32, 32, NULL, &ex_over->m_over);
 			break;
 
 		}
 		}
 
 	}
+}
+
+int main()
+{
+	wcout.imbue(locale("korean"));
+	WSADATA WSAData;
+	WSAStartup(MAKEWORD(2, 2), &WSAData);
+
+	HANDLE h_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, NULL, NULL);
+
+	SOCKET listenSocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	CreateIoCompletionPort(reinterpret_cast<HANDLE>(listenSocket), h_iocp, 0, NULL);//0번이 listen socket
+
+	SOCKADDR_IN serverAddr;
+	memset(&serverAddr, 0, sizeof(SOCKADDR_IN));
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(SERVER_PORT);
+	serverAddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+	::bind(listenSocket, (struct sockaddr*)&serverAddr, sizeof(SOCKADDR_IN));
+	listen(listenSocket, SOMAXCONN);
+
+	EXOVER accept_over;
+	accept_over.m_op = OP_ACCEPT;
+	ZeroMemory(&accept_over.m_over, sizeof(accept_over.m_over));
+	SOCKET client_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	accept_over.m_socket = client_socket;
+	AcceptEx(listenSocket, client_socket, accept_over.m_iobuf, 0, 32, 32, NULL, &accept_over.m_over);
+
+	vector<thread> vt_worker;
+	for (int i = 0; i < MAX_THREAD; ++i) {
+		vt_worker.emplace_back(worker, h_iocp, listenSocket);
+	}
+	for (auto& th : vt_worker) {
+		th.join();
+	}
+	
 	closesocket(listenSocket);
 	WSACleanup();
 }
