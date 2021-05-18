@@ -3,12 +3,11 @@
 using namespace std;
 
 int g_data = 0;
-bool g_ready = false;
+volatile bool g_ready = false;
 
 void receiver() {
-	while (false == g_ready) {
-		cout << "I Recvived " << g_data << endl;
-	}
+	while (false == g_ready);
+	cout << g_data << endl;
 }
 
 void sender() {
@@ -18,9 +17,10 @@ void sender() {
 
 int main() {
 	thread th_recv{ receiver };
-	this_thread::sleep_for(1s);
 	thread th_send{ sender };
 
 	th_recv.join();
 	th_send.join();
+
+	return 0;
 }

@@ -11,7 +11,6 @@ constexpr int PORTNUM = 3500;
 const char* IPNUM = "127.0.0.1";
 
 int main() {
-
 	WSAData wsa;
 	WSAStartup(MAKEWORD(2, 0), &wsa);
 	SOCKET s = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, 0);

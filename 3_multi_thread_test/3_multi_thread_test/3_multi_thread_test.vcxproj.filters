@@ -24,5 +24,14 @@
     <ClCompile Include="sync_0.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="sync_1.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="sync_2.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="atomic_0.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
