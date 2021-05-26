@@ -423,6 +423,7 @@ void do_npc_random_move(S_OBJECT& npc) {
 			if (objects[pl].m_view_list.count(pl) != 0) {
 				objects[pl].m_view_list.erase(npc.id);
 				objects[pl].m_view_lock.unlock();
+				objects[npc.id].is_active = false;
 				send_remove_object(pl, npc.id);
 			}
 			else {
@@ -500,9 +501,10 @@ void do_worker(HANDLE h_iocp, SOCKET l_socket)
 			break;
 		}
 		case OP_RANDOM_MOVE: { //무조건 이동하는 것이 아닌 플레이어가 주변에 있을 때만 이동
-
-			do_npc_random_move(objects[key]);
-			add_event(key, OP_RANDOM_MOVE, 1000);
+			if (objects[key].is_active == true) {
+				do_npc_random_move(objects[key]);
+				add_event(key, OP_RANDOM_MOVE, 1000);
+			}
 			delete ex_over;
 			break;
 		}
