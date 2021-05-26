@@ -3,9 +3,9 @@
 constexpr int MAX_NAME = 100;
 constexpr int MAX_BUFFER = 1024;
 constexpr short SERVER_PORT = 3500;
-constexpr int WORLD_X_SIZE = 400;
-constexpr int WORLD_Y_SIZE = 400;
-constexpr int MAX_USER = 10000;
+constexpr int WORLD_X_SIZE = 800;
+constexpr int WORLD_Y_SIZE = 800;
+constexpr int MAX_USER = 30000;
 
 constexpr int PLAYER_ATTRIB = 0;
 constexpr int NPC_ATTRIB = 5000;

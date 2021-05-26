@@ -4,18 +4,20 @@
 #include <vector>
 #include <mutex>
 #include <array>
-using namespace std;
 #include <WS2tcpip.h>
 #include <MSWSock.h>
+#include <queue>
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "MSWSock.lib")
 
 #include "protocol.h"
+using namespace std;
 using namespace chrono;
 
 //#define LOG_ON
 
-enum OP_TYPE  { OP_RECV, OP_SEND, OP_ACCEPT };
+enum OP_TYPE  { OP_RECV, OP_SEND, OP_ACCEPT, OP_RANDOM_MOVE, OP_ATTACK };
+enum PL_STATE { PLST_FREE, PLST_CONNECTED, PLST_INGAME };
 struct EX_OVER
 {
 	WSAOVERLAPPED	m_over;
@@ -24,9 +26,6 @@ struct EX_OVER
 	OP_TYPE			m_op;
 	SOCKET			m_csocket;					// OP_ACCEPT에서만 사용
 };
-
-enum PL_STATE { PLST_FREE, PLST_CONNECTED, PLST_INGAME };
-
 struct S_OBJECT
 {
 	mutex  m_slock;
@@ -40,13 +39,47 @@ struct S_OBJECT
 	char m_name[200];
 	short	x, y;
 	unsigned int move_time;
+	atomic_bool is_active;
 
 	unordered_set<int> m_view_list;
 	mutex m_view_lock;
+
 };
+struct TIMER_EVENT {
+	int object;				//누가
+	OP_TYPE e_type;			//무엇을
+	system_clock::time_point start_time;		//언제
+	int target_id;
+
+	constexpr bool operator < (const TIMER_EVENT& lhs) const {
+		return start_time > lhs.start_time;
+	}
+};
+priority_queue<TIMER_EVENT> timer_queue;
+mutex timer_lock;
 
 constexpr int SERVER_ID = 0;
 array <S_OBJECT, MAX_USER + 1> objects;
+HANDLE h_iocp;
+
+void add_event(int obj, OP_TYPE ev_t, int delay_ms) {
+	TIMER_EVENT ev;
+	ev.e_type = ev_t;
+	ev.object = obj;
+	ev.start_time = system_clock::now() + milliseconds(delay_ms);
+	timer_lock.lock();
+	timer_queue.push(ev);
+	timer_lock.unlock();
+}
+
+void wake_up_npc(int npc_id) {
+	if (objects[npc_id].is_active == false) {
+		bool old_state = false;
+		if (atomic_compare_exchange_strong(&objects[npc_id].is_active, &old_state, true) == true) { // is_active가 false -> true 변환이 성공했을 때
+			add_event(npc_id, OP_RANDOM_MOVE, 1000);
+		}
+	}
+}
 
 void disconnect(int p_id);
 
@@ -60,6 +93,7 @@ void display_error(const char* msg, int err_no)
 	wcout << lpMsgBuf << endl;
 	LocalFree(lpMsgBuf);
 }
+
 void send_packet(int p_id, void *p)
 {
 	int p_size = reinterpret_cast<unsigned char*>(p)[0];
@@ -215,6 +249,9 @@ void do_move(int p_id, DIRECTION dir)
 					send_move_packet(pl, p_id);
 				}
 			}
+			else { // is_npc(pl) == true
+				wake_up_npc(pl);
+			}
 		}
 		else {                        // 2. 기존 시야에도 있고 새 시야에도 있는 경우
 			if (false == is_npc(pl)) {
@@ -282,6 +319,9 @@ void process_packet(int p_id, unsigned char* p_buf)
 							send_add_object(pl.id, p_id);
 							objects[pl.id].m_view_lock.unlock();
 						}
+						else {
+							wake_up_npc(pl.id);
+						}
 					}
 				}
 			}
@@ -321,81 +361,6 @@ void disconnect(int p_id)
 	}
 }
 
-void worker(HANDLE h_iocp, SOCKET l_socket)
-{
-	while (true) {
-		DWORD num_bytes;
-		ULONG_PTR ikey;
-		WSAOVERLAPPED* over;
-
-		BOOL ret = GetQueuedCompletionStatus(h_iocp, &num_bytes,
-			&ikey, &over, INFINITE);
-
-		int key = static_cast<int>(ikey);
-		if (FALSE == ret) {
-			if (SERVER_ID == key) {
-				display_error("GQCS : ", WSAGetLastError());
-				exit(-1);
-			}
-			else {
-				display_error("GQCS : ", WSAGetLastError());
-				disconnect(key);
-			}
-		}
-		if ((key != SERVER_ID) && (0 == num_bytes)) {
-			disconnect(key);
-			continue;
-		}
-		EX_OVER* ex_over = reinterpret_cast<EX_OVER*>(over);
-
-		switch (ex_over->m_op) {
-		case OP_RECV: {
-			unsigned char* packet_ptr = ex_over->m_packetbuf;
-			int num_data = num_bytes + objects[key].m_prev_size;
-			int packet_size = packet_ptr[0];
-
-			while (num_data >= packet_size) {
-				process_packet(key, packet_ptr);
-				num_data -= packet_size;
-				packet_ptr += packet_size;
-				if (0 >= num_data) break;
-				packet_size = packet_ptr[0];
-			}
-			objects[key].m_prev_size = num_data;
-			if (0 != num_data)
-				memcpy(ex_over->m_packetbuf, packet_ptr, num_data);
-			do_recv(key);
-		}
-					break;
-		case OP_SEND:
-			delete ex_over;
-			break;
-		case OP_ACCEPT: {
-			int c_id = get_new_player_id(ex_over->m_csocket);
-			if (-1 != c_id) {
-				objects[c_id].m_recv_over.m_op = OP_RECV;
-				objects[c_id].m_prev_size = 0;
-				CreateIoCompletionPort(
-					reinterpret_cast<HANDLE>(objects[c_id].m_socket), h_iocp, c_id, 0);
-				do_recv(c_id);
-			}
-			else {
-				closesocket(objects[c_id].m_socket);
-			}
-
-			memset(&ex_over->m_over, 0, sizeof(ex_over->m_over));
-			SOCKET c_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
-			ex_over->m_csocket = c_socket;
-			AcceptEx(l_socket, c_socket,
-				ex_over->m_packetbuf, 0, 32, 32, NULL, &ex_over->m_over);
-		}
-					  break;
-		}
-	}
-
-}
-
-
 void do_npc_random_move(S_OBJECT& npc) {
 	unordered_set<int> old_vl;
 	for (auto& obj : objects) {
@@ -404,24 +369,24 @@ void do_npc_random_move(S_OBJECT& npc) {
 		if (can_see(npc.id, obj.id) == false) continue;
 		old_vl.insert(obj.id);
 	}
-	
+
 	int x = npc.x;
 	int y = npc.y;
 	switch (rand() % 4) {
 	case 0: {
-		if (x < (WORLD_X_SIZE - 1))x++; 
+		if (x < (WORLD_X_SIZE - 1))x++;
 		break;
 	}
 	case 1: {
-		if (x > 0)x--; 
+		if (x > 0)x--;
 		break;
 	}
 	case 2: {
-		if (y < (WORLD_Y_SIZE - 1))y++; 
+		if (y < (WORLD_Y_SIZE - 1))y++;
 		break;
 	}
 	case 3: {
-		if (y > 0)y--; 
+		if (y > 0)y--;
 		break;
 	}
 	}
@@ -467,6 +432,85 @@ void do_npc_random_move(S_OBJECT& npc) {
 	}
 }
 
+void do_worker(HANDLE h_iocp, SOCKET l_socket)
+{
+	while (true) {
+		DWORD num_bytes;
+		ULONG_PTR ikey;
+		WSAOVERLAPPED* over;
+
+		BOOL ret = GetQueuedCompletionStatus(h_iocp, &num_bytes,
+			&ikey, &over, INFINITE);
+
+		int key = static_cast<int>(ikey);
+		if (FALSE == ret) {
+			if (SERVER_ID == key) {
+				display_error("GQCS : ", WSAGetLastError());
+				exit(-1);
+			}
+			else {
+				display_error("GQCS : ", WSAGetLastError());
+				disconnect(key);
+			}
+		}
+		if ((key != SERVER_ID) && (0 == num_bytes)) {
+			disconnect(key);
+			continue;
+		}
+		EX_OVER* ex_over = reinterpret_cast<EX_OVER*>(over);
+
+		switch (ex_over->m_op) {
+		case OP_RECV: {
+			unsigned char* packet_ptr = ex_over->m_packetbuf;
+			int num_data = num_bytes + objects[key].m_prev_size;
+			int packet_size = packet_ptr[0];
+
+			while (num_data >= packet_size) {
+				process_packet(key, packet_ptr);
+				num_data -= packet_size;
+				packet_ptr += packet_size;
+				if (0 >= num_data) break;
+				packet_size = packet_ptr[0];
+			}
+			objects[key].m_prev_size = num_data;
+			if (0 != num_data)
+				memcpy(ex_over->m_packetbuf, packet_ptr, num_data);
+			do_recv(key);
+			break;
+		}
+		case OP_SEND: {
+			delete ex_over;
+			break;
+		}
+		case OP_ACCEPT: {
+			int c_id = get_new_player_id(ex_over->m_csocket);
+			if (-1 != c_id) {
+				objects[c_id].m_recv_over.m_op = OP_RECV;
+				objects[c_id].m_prev_size = 0;
+				CreateIoCompletionPort(
+					reinterpret_cast<HANDLE>(objects[c_id].m_socket), h_iocp, c_id, 0);
+				do_recv(c_id);
+			}
+			else closesocket(objects[c_id].m_socket);
+
+			memset(&ex_over->m_over, 0, sizeof(ex_over->m_over));
+			SOCKET c_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+			ex_over->m_csocket = c_socket;
+			AcceptEx(l_socket, c_socket, ex_over->m_packetbuf, 0, 32, 32, NULL, &ex_over->m_over);
+			break;
+		}
+		case OP_RANDOM_MOVE: { //무조건 이동하는 것이 아닌 플레이어가 주변에 있을 때만 이동
+
+			do_npc_random_move(objects[key]);
+			add_event(key, OP_RANDOM_MOVE, 1000);
+			delete ex_over;
+			break;
+		}
+		case OP_ATTACK: break;
+		}
+	}
+}
+
 void do_ai() {
 	while (1) {
 		auto start_t = chrono::system_clock::now();
@@ -484,6 +528,27 @@ void do_ai() {
 	}
 }
 
+void do_timer() {
+	using namespace chrono;
+
+	while (1) {
+		timer_lock.lock();
+		if ((timer_queue.empty() == false) && timer_queue.top().start_time < system_clock::now()) {
+			TIMER_EVENT ev{ timer_queue.top() };
+			timer_queue.pop();
+			timer_lock.unlock();
+			EX_OVER* ex_over = new EX_OVER;
+			ex_over->m_op = ev.e_type;
+			ex_over->m_over;
+			PostQueuedCompletionStatus(h_iocp, 1, ev.object, &ex_over->m_over);
+		}
+		else {
+			timer_lock.unlock();
+			this_thread::sleep_for(10ms);
+		}
+	}
+}
+
 int main()
 {
 	for (int i = 0; i < MAX_USER + 1; ++i) {
@@ -491,10 +556,11 @@ int main()
 		pl.id = i;
 		pl.m_state = PLST_FREE;
 		if (is_npc(i) == true) {
-			sprintf_s(pl.m_name, "npc%d", i);
+			sprintf_s(pl.m_name, "N%d", i);
 			pl.m_state = PLST_INGAME;
 			pl.x = rand() % WORLD_X_SIZE;
 			pl.y = rand() % WORLD_Y_SIZE;
+			//add_event(i, OP_RANDOM_MOVE, 1000);
 		}
 	}
 
@@ -502,7 +568,7 @@ int main()
 	WSAStartup(MAKEWORD(2, 2), &WSAData);
 
 	wcout.imbue(locale("korean"));
-	HANDLE h_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, 0);
+	h_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, 0);
 	SOCKET listenSocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 	CreateIoCompletionPort(reinterpret_cast<HANDLE>(listenSocket), h_iocp, SERVER_ID, 0);
 	SOCKADDR_IN serverAddr;
@@ -528,9 +594,10 @@ int main()
 
 	vector <thread> worker_threads;
 	for (int i = 0; i < 1; ++i)
-		worker_threads.emplace_back(worker, h_iocp, listenSocket);
+		worker_threads.emplace_back(do_worker, h_iocp, listenSocket);
 
-	thread ai_thread{ do_ai };
+	thread timer_thread{ do_timer };
+	timer_thread.join();
 
 	for (auto& th : worker_threads)
 		th.join();
