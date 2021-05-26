@@ -43,7 +43,6 @@ struct S_OBJECT
 
 	unordered_set<int> m_view_list;
 	mutex m_view_lock;
-
 };
 struct TIMER_EVENT {
 	int object;				//누가
@@ -60,6 +59,12 @@ mutex timer_lock;
 
 constexpr int SERVER_ID = 0;
 array <S_OBJECT, MAX_USER + 1> objects;
+
+vector<short> sec_1;
+vector<short> sec_2;
+vector<short> sec_3;
+vector<short> sec_4;
+
 HANDLE h_iocp;
 
 void add_event(int obj, OP_TYPE ev_t, int delay_ms) {
@@ -108,6 +113,7 @@ void send_packet(int p_id, void *p)
 	memcpy(s_over->m_packetbuf, p, p_size);
 	s_over->m_wsabuf[0].buf = reinterpret_cast<CHAR *>(s_over->m_packetbuf);
 	s_over->m_wsabuf[0].len = p_size;
+	//lock_guard<mutex> lg{ objects[p_id].m_slock };
 	int ret = WSASend(objects[p_id].m_socket, s_over->m_wsabuf, 1, 
 		NULL, 0, &s_over->m_over, 0);
 	if (0 != ret) {
@@ -124,9 +130,7 @@ bool is_npc(int id) {
 	return false;
 }
 
-void do_recv(int key)
-{
-
+void do_recv(int key){
 	objects[key].m_recv_over.m_wsabuf[0].buf =
 		reinterpret_cast<char *>(objects[key].m_recv_over.m_packetbuf)
 		+ objects[key].m_prev_size;
@@ -191,7 +195,9 @@ void send_add_object(int c_id, int p_id)
 	p.x = objects[p_id].x;
 	p.y = objects[p_id].y;
 	p.race = 0;
+	objects[p_id].m_slock.lock();
 	strcpy_s(p.name, objects[p_id].m_name);
+	objects[p_id].m_slock.unlock();
 	send_packet(c_id, &p);
 }
 
@@ -219,19 +225,23 @@ void do_move(int p_id, DIRECTION dir)
 	case D_W: if (x > 0) x--; break;
 	case D_E: if (x < (WORLD_X_SIZE - 1)) x++; break;
 	}
-	unordered_set<int> old_vl;
+	unordered_set<int> old_view_list;
 	objects[p_id].m_view_lock.lock();
-	old_vl = objects[p_id].m_view_list;
+	old_view_list = objects[p_id].m_view_list;
 	objects[p_id].m_view_lock.unlock();
-	unordered_set<int> new_vl;
+
+	unordered_set<int> new_view_list;
 	for (auto& pl : objects) {
 		if (pl.id == p_id) continue;
 		if ((pl.m_state == PLST_INGAME) && can_see(p_id, pl.id))
-			new_vl.insert(pl.id);
+			new_view_list.insert(pl.id);
 	}
+
 	send_move_packet(p_id, p_id);
-	for (auto pl : new_vl) {
-		if (0 == old_vl.count(pl)) {      // 1. 새로 시야에 들어오는 경우
+
+
+	for (auto pl : new_view_list) {
+		if (0 == old_view_list.count(pl)) {      // 1. 새로 시야에 들어오는 경우
 			objects[p_id].m_view_lock.lock();
 			objects[p_id].m_view_list.insert(pl);
 			objects[p_id].m_view_lock.unlock();
@@ -270,8 +280,8 @@ void do_move(int p_id, DIRECTION dir)
 		}
 	}
 
-	for (auto pl : old_vl) {
-		if (0 == new_vl.count(pl)) {
+	for (auto pl : old_view_list) {
+		if (0 == new_view_list.count(pl)) {
 			// 3. 시야에서 사라진 경우
 			objects[p_id].m_view_lock.lock();
 			objects[p_id].m_view_list.erase(pl);
@@ -302,6 +312,21 @@ void process_packet(int p_id, unsigned char* p_buf)
 		objects[p_id].x = rand() % WORLD_X_SIZE;
 		objects[p_id].y = rand() % WORLD_Y_SIZE;
 		send_login_ok_packet(p_id);
+
+		//login 되는 순간 섹터링 하자
+		if (objects[p_id].x < WORLD_X_SIZE / 2 && objects[p_id].y < WORLD_Y_SIZE / 2) {
+			sec_1.push_back(p_id);
+		}
+		if (objects[p_id].x >= WORLD_X_SIZE / 2 && objects[p_id].y < WORLD_Y_SIZE / 2) {
+			sec_2.push_back(p_id);
+		}
+		if (objects[p_id].x >= WORLD_X_SIZE / 2 && objects[p_id].y >= WORLD_Y_SIZE / 2) {
+			sec_3.push_back(p_id);
+		}
+		if (objects[p_id].x < WORLD_X_SIZE / 2 && objects[p_id].y >= WORLD_Y_SIZE / 2) {
+			sec_4.push_back(p_id);
+		}
+
 		objects[p_id].m_state = PLST_INGAME;
 
 		for (auto& pl : objects) {
@@ -355,19 +380,20 @@ void disconnect(int p_id)
 	for (auto& pl : objects) {
 		if (false == is_npc(pl.id)) {
 			lock_guard<mutex> gl2{ pl.m_slock };
-			if (PLST_INGAME == pl.m_state)
+			if (PLST_INGAME == pl.m_state) {
 				send_remove_object(pl.id, p_id);
+			}
 		}
 	}
 }
 
 void do_npc_random_move(S_OBJECT& npc) {
-	unordered_set<int> old_vl;
+	unordered_set<int> old_view_list;
 	for (auto& obj : objects) {
 		if (PLST_INGAME != obj.m_state) continue;
 		if (is_npc(obj.id) == true) continue;
 		if (can_see(npc.id, obj.id) == false) continue;
-		old_vl.insert(obj.id);
+		old_view_list.insert(obj.id);
 	}
 
 	int x = npc.x;
@@ -394,17 +420,17 @@ void do_npc_random_move(S_OBJECT& npc) {
 	npc.y = y;
 
 
-	unordered_set<int> new_vl;
+	unordered_set<int> new_view_list;
 	for (auto& obj : objects) {
 		if (PLST_INGAME != obj.m_state) continue;
 		if (is_npc(obj.id) == true) continue;
 		if (can_see(npc.id, obj.id) == false) continue;
-		new_vl.insert(obj.id);
+		new_view_list.insert(obj.id);
 	}
 
 	//새로 추가된 객체
-	for (auto pl : new_vl) {
-		if (old_vl.count(pl) == 0) {
+	for (auto pl : new_view_list) {
+		if (old_view_list.count(pl) == 0) {
 			//플레이어의 시야에 등장
 			objects[pl].m_view_lock.lock();
 			objects[pl].m_view_list.insert(npc.id);
@@ -417,8 +443,8 @@ void do_npc_random_move(S_OBJECT& npc) {
 		}
 	}
 
-	for (auto pl : old_vl) {
-		if (new_vl.count(pl) == 0) {
+	for (auto pl : old_view_list) {
+		if (new_view_list.count(pl) == 0) {
 			objects[pl].m_view_lock.lock();
 			if (objects[pl].m_view_list.count(pl) != 0) {
 				objects[pl].m_view_list.erase(npc.id);
