@@ -195,9 +195,7 @@ void send_add_object(int c_id, int p_id)
 	p.x = objects[p_id].x;
 	p.y = objects[p_id].y;
 	p.race = 0;
-	objects[p_id].m_slock.lock();
 	strcpy_s(p.name, objects[p_id].m_name);
-	objects[p_id].m_slock.unlock();
 	send_packet(c_id, &p);
 }
 
@@ -231,72 +229,199 @@ void do_move(int p_id, DIRECTION dir)
 	objects[p_id].m_view_lock.unlock();
 
 	unordered_set<int> new_view_list;
-	for (auto& pl : objects) {
-		if (pl.id == p_id) continue;
-		if ((pl.m_state == PLST_INGAME) && can_see(p_id, pl.id))
-			new_view_list.insert(pl.id);
+
+	S_OBJECT& cur = objects[p_id];
+	short sec_x = WORLD_X_SIZE / 2;
+	short sec_y = WORLD_Y_SIZE / 2;
+	short intersec = 5;
+
+	//내가 1 sec에 있다면
+	if (cur.x < (sec_x - intersec) && cur.y < (sec_y - intersec)) {
+		for (int i = 0; i < sec_1.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		send_move_packet(p_id, p_id);
 	}
 
-	send_move_packet(p_id, p_id);
+	//내가 2 sec에 있다면
+	else if (cur.x > (sec_x + intersec) && cur.y < (sec_y - intersec)) {
+		for (int i = 0; i < sec_2.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		send_move_packet(p_id, p_id);
+	}
 
+	//내가 3 sec에 있다면
+	else if (cur.x > (sec_x + intersec) && cur.y > (sec_y + intersec)) {
+		for (int i = 0; i < sec_3.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		send_move_packet(p_id, p_id);
+	}
+
+	//내가 4 sec에 있다면
+	else if (cur.x < (sec_x - intersec) && cur.y > (sec_y + intersec)) {
+		for (int i = 0; i < sec_4.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		send_move_packet(p_id, p_id);
+	}
+
+	//sec 1, 2 사이에 있다면 (intersec)
+	else if (cur.x >= (sec_x - intersec) && cur.x <= (sec_x + intersec) && cur.y < (sec_y - intersec)) {
+		for (int i = 0; i < sec_1.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		for (int i = 0; i < sec_2.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		send_move_packet(p_id, p_id);
+	}
+
+	//sec 3, 4 사이에 있다면 (intersec)
+	else if (cur.x >= (sec_x - intersec) && cur.x <= (sec_x + intersec) && cur.y > (sec_y + intersec)) {
+		for (int i = 0; i < sec_3.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		for (int i = 0; i < sec_4.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		send_move_packet(p_id, p_id);
+	}
+
+	//sec 1, 4 사이에 있다면 (intersec)
+	else if (cur.x < (sec_x - intersec) && cur.y >= (sec_y - intersec) && cur.y <= (sec_y + intersec)) {
+		for (int i = 0; i < sec_1.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		for (int i = 0; i < sec_4.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		send_move_packet(p_id, p_id);
+	}
+
+	//sec 2, 3 사이에 있다면 (intersec)
+	else if (cur.x > (sec_x + intersec) && cur.y >= (sec_y - intersec) && cur.y <= (sec_y + intersec)) {
+		for (int i = 0; i < sec_2.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		for (int i = 0; i < sec_3.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		send_move_packet(p_id, p_id);
+	}
+
+	//sec 1, 2, 3, 4 사이에 있다면 (intersec)
+	else if (cur.x >= (sec_x - intersec) && cur.x <= (sec_x - intersec) &&
+		cur.y >= (sec_y - intersec) && cur.y <= (sec_y + intersec)) {
+		for (int i = 0; i < sec_1.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		for (int i = 0; i < sec_2.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		for (int i = 0; i < sec_3.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		for (int i = 0; i < sec_4.size(); ++i) { //new view list에 sec 추가
+			if (p_id == i) continue; //스스로 아니고
+			if (objects[p_id].m_state != PLST_INGAME) continue; //인게임이고
+			if (can_see(p_id, i)) { //볼수 있다면?
+				new_view_list.insert(i);
+			}
+		}
+		send_move_packet(p_id, p_id);
+	}
 
 	for (auto pl : new_view_list) {
-		if (0 == old_view_list.count(pl)) {      // 1. 새로 시야에 들어오는 경우
-			objects[p_id].m_view_lock.lock();
+		if (old_view_list.count(pl) == 0) { //새로 시야에 들어온 객체
 			objects[p_id].m_view_list.insert(pl);
-			objects[p_id].m_view_lock.unlock();
 			send_add_object(p_id, pl);
-
-			if (false == is_npc(pl)) {
-				objects[pl].m_view_lock.lock();
-				if (0 == objects[pl].m_view_list.count(p_id)) {
-					objects[pl].m_view_list.insert(p_id);
-					objects[pl].m_view_lock.unlock();
-					send_add_object(pl, p_id);
-				}
-				else {
-					objects[pl].m_view_lock.unlock();
-					send_move_packet(pl, p_id);
-				}
+			if (objects[pl].m_view_list.count(p_id)) {
+				objects[pl].m_view_list.insert(p_id);
+				send_add_object(pl, p_id);
 			}
-			else { // is_npc(pl) == true
-				wake_up_npc(pl);
+			else {
+				send_move_packet(pl, p_id);
 			}
 		}
-		else {                        // 2. 기존 시야에도 있고 새 시야에도 있는 경우
-			if (false == is_npc(pl)) {
-				objects[pl].m_view_lock.lock();
-				if (0 == objects[pl].m_view_list.count(p_id)) {
-					objects[pl].m_view_list.insert(p_id);
-					objects[pl].m_view_lock.unlock();
-					send_add_object(pl, p_id);
-				}
-				else {
-					objects[pl].m_view_lock.unlock();
-					send_move_packet(pl, p_id);
-				}
-				//send_move_packet(pl, p_id);
+		else {
+			if (objects[pl].m_view_list.count(p_id) != 0) {
+				send_move_packet(pl, p_id);
+			}
+			else {
+				objects[pl].m_view_list.insert(p_id);
+				send_add_object(pl, p_id);
 			}
 		}
 	}
-
 	for (auto pl : old_view_list) {
-		if (0 == new_view_list.count(pl)) {
-			// 3. 시야에서 사라진 경우
-			objects[p_id].m_view_lock.lock();
+		if (new_view_list.count(pl) == 0) {
 			objects[p_id].m_view_list.erase(pl);
-			objects[p_id].m_view_lock.unlock();
 			send_remove_object(p_id, pl);
-
-			if (false == is_npc(pl)) {
-				objects[pl].m_view_lock.lock();
-				if (0 != objects[pl].m_view_list.count(p_id)) {
-					objects[pl].m_view_list.erase(p_id);
-					objects[pl].m_view_lock.unlock();
-					send_remove_object(pl, p_id);
-				}
-				else
-					objects[pl].m_view_lock.unlock();
+			if (objects[pl].m_view_list.count(p_id) != 0) {
+				objects[pl].m_view_list.erase(p_id);
+				send_remove_object(pl, p_id);
 			}
 		}
 	}
