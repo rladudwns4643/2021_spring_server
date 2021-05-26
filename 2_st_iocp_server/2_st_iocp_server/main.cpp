@@ -91,10 +91,10 @@ void send_move_packet(int to, int from) {
 void do_move(int p_id, int dir) {
 	SESSION& p = players[p_id];
 	switch (dir) {
-	case D_R: if (p.x < (WORLD_X_SIZE - 1)) ++p.x;		break;
-	case D_D: if (p.y < (WORLD_Y_SIZE - 1)) ++p.y;		break;
-	case D_L: if (p.x > 0) --p.x;						break;
-	case D_U: if (p.y > 0) --p.y;						break;
+	case D_N: if (p.y > 0) p.y--;					break;
+	case D_S: if (p.y < (WORLD_Y_SIZE - 1)) p.y++;	break;
+	case D_W: if (p.x > 0) p.x--;					break;
+	case D_E: if (p.x < (WORLD_X_SIZE - 1)) p.x++;	break;
 	}
 	for (auto& pl : players) {
 		send_move_packet(pl.second.m_id, p_id);
@@ -102,9 +102,16 @@ void do_move(int p_id, int dir) {
 }
 
 int get_new_player_id() {
-	for (int i = SERVER_LISTEN_KEY + 1; i <= MAX_USER; ++i) {
-		if (players.count(i) == 0) return i; //?
+	for (int i = SERVER_ID + 1; i <= MAX_USER; ++i) {
+		lock_guard<mutex> lg{ players[i].m_slock };
+		if (PLST_FREE == players[i].m_state) {
+			players[i].m_state = PLST_CONNECTED;
+			players[i].m_socket = p_socket;
+			players[i].m_name[0] = 0;
+			return i;
+		}
 	}
+	return -1;
 }
 
 void send_login_okay_packet(int p_id) {
