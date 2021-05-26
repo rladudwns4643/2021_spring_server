@@ -154,6 +154,7 @@ void ProcessPacket(char* ptr)
 		//players[id].set_name(my_packet->name);
 
 		if (id < MAX_USER) {
+			players[id].set_name(my_packet->name);
 			players[id].move(my_packet->x, my_packet->y);
 			players[id].show();
 		}

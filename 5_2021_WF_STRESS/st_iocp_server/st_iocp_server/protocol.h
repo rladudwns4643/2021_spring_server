@@ -5,7 +5,11 @@ constexpr int MAX_BUFFER = 1024;
 constexpr short SERVER_PORT = 3500;
 constexpr int WORLD_X_SIZE = 400;
 constexpr int WORLD_Y_SIZE = 400;
-constexpr int MAX_USER = 50000;
+constexpr int MAX_USER = 10000;
+
+constexpr int PLAYER_ATTRIB = 0;
+constexpr int NPC_ATTRIB = 5000;
+
 constexpr int VIEW_RADIUS = 5;
 
 constexpr unsigned char C2S_LOGIN = 1;
@@ -45,6 +49,7 @@ struct s2c_add_player {
 	int		id;
 	short	x, y;
 	int		race;
+	char	name[MAX_NAME];
 };
 
 struct s2c_move_player {
