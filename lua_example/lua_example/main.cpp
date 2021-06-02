@@ -10,6 +10,15 @@ extern "C" { //C로 정의된 라이브러리인것을 명시(컴파일러에게 알려줌)
 #pragma comment(lib, "lua54.lib")
 using namespace std;
 
+int add_in_c(lua_State* L) {
+	int a = lua_tonumber(L, -2);
+	int b = lua_tonumber(L, -1);
+	lua_pop(L, 3);
+	int c = a + b;
+	lua_pushnumber(L, c);
+	return 1;
+}
+
 int main() {
 	lua_State* L = luaL_newstate();		// 가상머신 lua 생성
 	luaL_openlibs(L);					// 기본 라이브러리 로드
@@ -20,7 +29,8 @@ int main() {
 		cout << "LUA error in exec: " << lua_tostring(L, -1) << endl;
 		exit(-1);
 	}
-	
+	//---------------------------------------------------------------------------
+
 	//lua -> c++ 변수를 stack에 쌓아서 전달
 	lua_getglobal(L, "pos_x");
 	lua_getglobal(L, "pos_y");
@@ -34,13 +44,26 @@ int main() {
 	cout << "dragon[" << dragon_x << ", "
 		<< dragon_y << "]\n";
 
+	//---------------------------------------------------------------------------
+
 	lua_getglobal(L, "plustwo");	//사용할 함수
 	lua_pushnumber(L, 100);			//파라미터
-	lua_pcall(L, 1, 1, 0);			//파라미터 개수, 
+	lua_pcall(L, 1, 1, 0);			//파라미터 개수, 리턴 개수(스텍에 들어감)
 	int result = lua_tonumber(L, -1);
 	lua_pop(L, 1);
 
 	cout << "result: " << result << endl;
+	//---------------------------------------------------------------------------
+
+	lua_register(L, "call_c_func_add", add_in_c);
+	lua_getglobal(L, "add_num");
+	lua_pushnumber(L, 100);
+	lua_pushnumber(L, 200);
+	lua_pcall(L, 2, 1, 0);
+	result = lua_tonumber(L, -1);
+	lua_pop(L, 1);
+	cout << "result: "<<result << endl;
+
 
 	lua_close(L);						// 가상머신 종료
 }
