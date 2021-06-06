@@ -295,7 +295,7 @@ void do_move(int p_id, DIRECTION dir)
 					send_remove_object(pl, p_id);
 				}
 				else {
-					objects[pl].is_active = false;
+					//objects[pl].is_active = false;
 					objects[pl].m_view_lock.unlock();
 				}
 			}
@@ -511,9 +511,16 @@ void do_worker(HANDLE h_iocp, SOCKET l_socket)
 			AcceptEx(l_socket, c_socket, ex_over->m_packetbuf, 0, 32, 32, NULL, &ex_over->m_over);
 			break;
 		}
-		case OP_RANDOM_MOVE: { //무조건 이동하는 것이 아닌 플레이어가 주변에 있을 때만 이동
+		case OP_RANDOM_MOVE: {
+			bool is_alive = false;
 			do_npc_random_move(objects[key]);
-			add_event(key, OP_RANDOM_MOVE, 1000);
+			for (int i = 0; i < NPC_ATTRIB; ++i) {
+				if (can_see(key, i) == true) {
+					is_alive = true;
+				}
+			}
+			if (is_alive == true) add_event(key, OP_RANDOM_MOVE, 1000);
+			else objects[key].is_active = false;
 			delete ex_over;
 			break;
 		}
@@ -554,6 +561,7 @@ int main()
 			pl.m_state = PLST_INGAME;
 			pl.x = rand() % WORLD_X_SIZE;
 			pl.y = rand() % WORLD_Y_SIZE;
+			pl.is_active = false;
 		}
 	}
 
@@ -586,7 +594,7 @@ int main()
 	}
 
 	vector <thread> worker_threads;
-	for (int i = 0; i < 1; ++i)
+	for (int i = 0; i < 6; ++i)
 		worker_threads.emplace_back(do_worker, h_iocp, listenSocket);
 
 	thread timer_thread{ do_timer };
