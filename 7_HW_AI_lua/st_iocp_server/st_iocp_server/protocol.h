@@ -6,7 +6,7 @@ constexpr short SERVER_PORT = 3500;
 constexpr int WORLD_X_SIZE = 800;
 constexpr int WORLD_Y_SIZE = 800;
 constexpr int MAX_USER = 30000;
-constexpr int NPC_START = 5000;
+constexpr int NPC_ATTRIB = 5000;
 
 constexpr int VIEW_RADIUS = 5;
 

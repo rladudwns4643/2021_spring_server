@@ -367,9 +367,13 @@ void disconnect(int p_id)
 	for (int i = 0; i < NPC_ATTRIB; ++i) {
 		if (is_npc(objects[i].id) == true) continue;
 		if (p_id == objects[i].id) continue;
-		lock_guard<mutex> gl2{ objects[i].m_slock };
+		objects[i].m_slock.lock();
 		if (PLST_INGAME == objects[i].m_state) {
+			objects[i].m_slock.unlock();
 			send_remove_object(objects[i].id, p_id);
+		}
+		else {
+			objects[i].m_slock.unlock();
 		}
 	}
 }

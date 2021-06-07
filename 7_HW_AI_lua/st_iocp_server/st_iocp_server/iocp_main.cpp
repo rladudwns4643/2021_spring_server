@@ -20,7 +20,8 @@ extern "C" { //C로 정의된 라이브러리인것을 명시(컴파일러에게 알려줌)
 #pragma comment(lib, "lua54.lib")
 
 
-enum OP_TYPE { OP_RECV, OP_SEND, OP_ACCEPT, OP_RANDO_MOVE, OP_ATTACK, OP_PLAYER_APPROACH };
+enum OP_TYPE { OP_RECV, OP_SEND, OP_ACCEPT, OP_RANDOM_MOVE, OP_ATTACK, OP_PLAYER_APPROACH };
+enum PL_STATE { PLST_FREE, PLST_CONNECTED, PLST_INGAME };
 struct EX_OVER
 {
 	WSAOVERLAPPED	m_over;
@@ -29,8 +30,6 @@ struct EX_OVER
 	OP_TYPE			m_op;
 	SOCKET			m_csocket;					// OP_ACCEPT에서만 사용
 };
-
-enum PL_STATE { PLST_FREE, PLST_CONNECTED, PLST_INGAME };
 
 struct TIMER_EVENT {
 	int object;
@@ -43,9 +42,6 @@ struct TIMER_EVENT {
 		return (start_time > L.start_time);
 	}
 };
-
-priority_queue <TIMER_EVENT> timer_queue;
-mutex timer_l;
 
 struct S_OBJECT
 {
@@ -62,16 +58,23 @@ struct S_OBJECT
 	short	x, y;
 	int		move_time;
 	unordered_set <int> m_view_list;
-	mutex   m_vl;
+	mutex   m_view_lock;
 
 	lua_State* L;
 	mutex m_sl;
 };
 
+priority_queue <TIMER_EVENT> timer_queue;
+mutex timer_l;
+
 constexpr int SERVER_ID = 0;
 array <S_OBJECT, MAX_USER + 1> objects;
 
 HANDLE h_iocp;
+
+bool CAS(volatile atomic_bool* addr, int before, int after) {
+	return atomic_compare_exchange_strong(reinterpret_cast<volatile atomic_int*>(addr), &before, after);
+}
 
 void add_event(int obj, OP_TYPE ev_t, int delay_ms)
 {
@@ -91,13 +94,13 @@ void wake_up_npc(int npc_id)
 		bool old_state = false;
 		if (true == atomic_compare_exchange_strong(&objects[npc_id].is_active,
 			&old_state, true))
-			add_event(npc_id, OP_RANDO_MOVE, 1000);
+			add_event(npc_id, OP_RANDOM_MOVE, 1000);
 	}
 }
 
 bool is_npc(int id)
 {
-	return id >= NPC_START;
+	return id >= NPC_ATTRIB;
 }
 
 void disconnect(int p_id);
@@ -145,7 +148,6 @@ void send_packet(int p_id, void* p)
 
 void do_recv(int key)
 {
-
 	objects[key].m_recv_over.m_wsabuf[0].buf =
 		reinterpret_cast<char*>(objects[key].m_recv_over.m_packetbuf)
 		+ objects[key].m_prev_size;
@@ -163,14 +165,21 @@ void do_recv(int key)
 
 int get_new_player_id(SOCKET p_socket)
 {
-	for (int i = SERVER_ID + 1; i <= MAX_USER; ++i) {
-		lock_guard<mutex> lg{ objects[i].m_slock };
-		if (PLST_FREE == objects[i].m_state) {
-			objects[i].m_state = PLST_CONNECTED;
-			objects[i].m_socket = p_socket;
-			objects[i].m_name[0] = 0;
-			return i;
-		}
+	int idx;
+
+	for (idx = 0; idx < MAX_USER; ++idx) {
+		if (objects[idx].m_state == PLST_FREE) break;
+	}
+	if (idx == MAX_USER) {
+		closesocket(p_socket); //limit new player
+	}
+	else {
+		objects[idx].m_slock.lock();
+		objects[idx].m_state = PLST_CONNECTED;
+		objects[idx].m_socket = p_socket;
+		objects[idx].m_name[0] = 0;
+		objects[idx].m_slock.unlock();
+		return idx;
 	}
 	return -1;
 }
@@ -245,9 +254,9 @@ void do_move(int p_id, DIRECTION dir)
 	case D_E: if (x < (WORLD_X_SIZE - 1)) x++; break;
 	}
 	unordered_set <int> old_vl;
-	objects[p_id].m_vl.lock();
+	objects[p_id].m_view_lock.lock();
 	old_vl = objects[p_id].m_view_list;
-	objects[p_id].m_vl.unlock();
+	objects[p_id].m_view_lock.unlock();
 	unordered_set <int> new_vl;
 	for (auto& pl : objects) {
 		if (pl.id == p_id) continue;
@@ -265,20 +274,20 @@ void do_move(int p_id, DIRECTION dir)
 	send_move_packet(p_id, p_id);
 	for (auto pl : new_vl) {
 		if (0 == old_vl.count(pl)) {		// 1. 새로 시야에 들어오는 객체
-			objects[p_id].m_vl.lock();
+			objects[p_id].m_view_lock.lock();
 			objects[p_id].m_view_list.insert(pl);
-			objects[p_id].m_vl.unlock();
+			objects[p_id].m_view_lock.unlock();
 			send_add_object(p_id, pl);
 
 			if (false == is_npc(pl)) {
-				objects[pl].m_vl.lock();
+				objects[pl].m_view_lock.lock();
 				if (0 == objects[pl].m_view_list.count(p_id)) {
 					objects[pl].m_view_list.insert(p_id);
-					objects[pl].m_vl.unlock();
+					objects[pl].m_view_lock.unlock();
 					send_add_object(pl, p_id);
 				}
 				else {
-					objects[pl].m_vl.unlock();
+					objects[pl].m_view_lock.unlock();
 					send_move_packet(pl, p_id);
 				}
 			}
@@ -286,14 +295,14 @@ void do_move(int p_id, DIRECTION dir)
 		}
 		else {		// 2. 기존 시야에도 있고 새 시야에도 있는 경우
 			if (false == is_npc(pl)) {
-				objects[pl].m_vl.lock();
+				objects[pl].m_view_lock.lock();
 				if (0 == objects[pl].m_view_list.count(p_id)) {
 					objects[pl].m_view_list.insert(p_id);
-					objects[pl].m_vl.unlock();
+					objects[pl].m_view_lock.unlock();
 					send_add_object(pl, p_id);
 				}
 				else {
-					objects[pl].m_vl.unlock();
+					objects[pl].m_view_lock.unlock();
 					send_move_packet(pl, p_id);
 				}
 			}
@@ -303,20 +312,20 @@ void do_move(int p_id, DIRECTION dir)
 	for (auto pl : old_vl) {
 		if (0 == new_vl.count(pl)) {
 			// 3. 시야에서 사라진 경우
-			objects[p_id].m_vl.lock();
+			objects[p_id].m_view_lock.lock();
 			objects[p_id].m_view_list.erase(pl);
-			objects[p_id].m_vl.unlock();
+			objects[p_id].m_view_lock.unlock();
 			send_remove_object(p_id, pl);
 
 			if (false == is_npc(pl)) {
-				objects[pl].m_vl.lock();
+				objects[pl].m_view_lock.lock();
 				if (0 != objects[pl].m_view_list.count(p_id)) {
 					objects[pl].m_view_list.erase(p_id);
-					objects[pl].m_vl.unlock();
+					objects[pl].m_view_lock.unlock();
 					send_remove_object(pl, p_id);
 				}
 				else {
-					objects[pl].m_vl.unlock();
+					objects[pl].m_view_lock.unlock();
 				}
 			}
 		}
@@ -328,26 +337,27 @@ void process_packet(int p_id, unsigned char* p_buf)
 	switch (p_buf[1]) {
 	case C2S_LOGIN: {
 		c2s_login* packet = reinterpret_cast<c2s_login*>(p_buf);
-		lock_guard <mutex> gl2{ objects[p_id].m_slock };
+		objects[p_id].m_slock.lock();
 		strcpy_s(objects[p_id].m_name, packet->name);
 		objects[p_id].x = rand() % WORLD_X_SIZE;
 		objects[p_id].y = rand() % WORLD_Y_SIZE;
-		send_login_ok_packet(p_id);
 		objects[p_id].m_state = PLST_INGAME;
+		objects[p_id].m_slock.unlock();
+		send_login_ok_packet(p_id);
 
 		for (auto& pl : objects) {
 			if (p_id != pl.id) {
-				lock_guard <mutex> gl{ pl.m_slock };
+				//lock_guard <mutex> gl{ pl.m_slock };
 				if (PLST_INGAME == pl.m_state) {
 					if (can_see(p_id, pl.id)) {
-						objects[p_id].m_vl.lock();
+						objects[p_id].m_view_lock.lock();
 						objects[p_id].m_view_list.insert(pl.id);
-						objects[p_id].m_vl.unlock();
+						objects[p_id].m_view_lock.unlock();
 						send_add_object(p_id, pl.id);
 						if (false == is_npc(pl.id)) {
-							objects[pl.id].m_vl.lock();
+							objects[pl.id].m_view_lock.lock();
 							objects[pl.id].m_view_list.insert(p_id);
-							objects[pl.id].m_vl.unlock();
+							objects[pl.id].m_view_lock.unlock();
 							send_add_object(pl.id, p_id);
 						}
 						else {
@@ -357,16 +367,14 @@ void process_packet(int p_id, unsigned char* p_buf)
 				}
 			}
 		}
-
-
-	}
 				  break;
+	}
 	case C2S_MOVE: {
 		c2s_move* packet = reinterpret_cast<c2s_move*>(p_buf);
 		objects[p_id].move_time = packet->move_time;
 		do_move(p_id, packet->dr);
-	}
 				 break;
+	}
 	default:
 		cout << "Unknown Packet Type from Client[" << p_id;
 		cout << "] Packet Type [" << p_buf[1] << "]";
@@ -376,74 +384,91 @@ void process_packet(int p_id, unsigned char* p_buf)
 
 void disconnect(int p_id)
 {
-	{
-		lock_guard <mutex> gl{ objects[p_id].m_slock };
-		if (PLST_FREE == objects[p_id].m_state) return;
-		closesocket(objects[p_id].m_socket);
-		objects[p_id].m_state = PLST_FREE;
-	}
-	for (auto& pl : objects) {
-		if (false == is_npc(pl.id)) {
-			lock_guard<mutex> gl2{ pl.m_slock };
-			if (PLST_INGAME == pl.m_state)
-				send_remove_object(pl.id, p_id);
+	objects[p_id].m_slock.lock();
+	if (objects[p_id].m_state == PLST_FREE) return;
+	closesocket(objects[p_id].m_socket);
+	objects[p_id].m_state = PLST_FREE;
+	objects[p_id].m_slock.unlock();
+
+	for (int i = 0; i < NPC_ATTRIB; ++i) {
+		if (is_npc(objects[i].id) == true) continue;
+		if (p_id == objects[i].id) continue;
+		objects[i].m_slock.lock();
+		if (PLST_INGAME == objects[i].m_state) {
+			objects[i].m_slock.unlock();
+			send_remove_object(objects[i].id, p_id);
+		}
+		else {
+			objects[i].m_slock.unlock();
 		}
 	}
 }
 
-void do_npc_random_move(S_OBJECT& npc)
-{
+void do_npc_random_move(S_OBJECT& npc) {
+	if (npc.is_active == false) return;
+
 	unordered_set<int> old_vl;
-	for (auto& obj : objects) {
-		if (PLST_INGAME != obj.m_state) continue;
-		if (true == is_npc(obj.id)) continue;
-		if (true == can_see(npc.id, obj.id))
-			old_vl.insert(obj.id);
+	for (int i = 0; i < NPC_ATTRIB; i++) { //all object -> all user
+		if (PLST_INGAME != objects[i].m_state) continue;
+		if (can_see(npc.id, objects[i].id) == false) continue;
+		old_vl.insert(objects[i].id);
 	}
 
 	int x = npc.x;
 	int y = npc.y;
 	switch (rand() % 4) {
-	case 0: if (x < (WORLD_X_SIZE - 1)) x++; break;
-	case 1: if (x > 0) x--; break;
-	case 2: if (y < (WORLD_Y_SIZE - 1)) y++; break;
-	case 3:if (y > 0) y--; break;
+	case 0: {
+		if (x < (WORLD_X_SIZE - 1))x++;
+		break;
+	}
+	case 1: {
+		if (x > 0)x--;
+		break;
+	}
+	case 2: {
+		if (y < (WORLD_Y_SIZE - 1))y++;
+		break;
+	}
+	case 3: {
+		if (y > 0)y--;
+		break;
+	}
 	}
 	npc.x = x;
 	npc.y = y;
 
 	unordered_set<int> new_vl;
-	for (auto& obj : objects) {
-		if (PLST_INGAME != obj.m_state) continue;
-		if (true == is_npc(obj.id)) continue;
-		if (true == can_see(npc.id, obj.id))
-			new_vl.insert(obj.id);
+	for (int i = 0; i < NPC_ATTRIB; i++) { //all object -> all user
+		if (PLST_INGAME != objects[i].m_state) continue;
+		if (can_see(npc.id, objects[i].id) == false) continue;
+		new_vl.insert(objects[i].id);
 	}
 
+	//새로 추가된 객체
 	for (auto pl : new_vl) {
-		if (0 == old_vl.count(pl)) {
-			// 플레이어의 시야에 등장
-			objects[pl].m_vl.lock();
+		if (old_vl.count(pl) == 0) {
+			//플레이어의 시야에 등장
+			objects[pl].m_view_lock.lock();
 			objects[pl].m_view_list.insert(npc.id);
-			objects[pl].m_vl.unlock();
+			objects[pl].m_view_lock.unlock();
 			send_add_object(pl, npc.id);
 		}
 		else {
-			// 플레이어가 계속 보고 있음.
+			//플레이어의 시야에서 이동
 			send_move_packet(pl, npc.id);
 		}
 	}
-	///vvcxxccxvvdsvdvds
+
 	for (auto pl : old_vl) {
-		if (0 == new_vl.count(pl)) {
-			objects[pl].m_vl.lock();
-			if (0 != objects[pl].m_view_list.count(npc.id)) {
+		if (new_vl.count(pl) == 0) {
+			objects[pl].m_view_lock.lock();
+			if (objects[pl].m_view_list.count(pl) != 0) {
 				objects[pl].m_view_list.erase(npc.id);
-				objects[pl].m_vl.unlock();
+				objects[pl].m_view_lock.unlock();
 				send_remove_object(pl, npc.id);
 			}
 			else {
-				objects[pl].m_vl.unlock();
+				objects[pl].m_view_lock.unlock();
 			}
 		}
 	}
@@ -493,11 +518,12 @@ void worker(HANDLE h_iocp, SOCKET l_socket)
 			if (0 != num_data)
 				memcpy(ex_over->m_packetbuf, packet_ptr, num_data);
 			do_recv(key);
-		}
 					break;
-		case OP_SEND:
+		}
+		case OP_SEND: {
 			delete ex_over;
 			break;
+		}
 		case OP_ACCEPT: {
 			int c_id = get_new_player_id(ex_over->m_csocket);
 			if (-1 != c_id) {
@@ -516,13 +542,21 @@ void worker(HANDLE h_iocp, SOCKET l_socket)
 			ex_over->m_csocket = c_socket;
 			AcceptEx(l_socket, c_socket,
 				ex_over->m_packetbuf, 0, 32, 32, NULL, &ex_over->m_over);
+			break;
 		}
-					  break;
-		case OP_RANDO_MOVE:
+		case OP_RANDOM_MOVE: {
+			bool is_alive = false;
 			do_npc_random_move(objects[key]);
-			add_event(key, OP_RANDO_MOVE, 1000);
+			for (int i = 0; i < NPC_ATTRIB; ++i) {
+				if (can_see(key, i) == true) {
+					is_alive = true;
+				}
+			}
+			if (is_alive == true) add_event(key, OP_RANDOM_MOVE, 1000);
+			else objects[key].is_active = false;
 			delete ex_over;
 			break;
+		}
 		case OP_ATTACK:
 			delete ex_over;
 			break;
@@ -540,7 +574,7 @@ void worker(HANDLE h_iocp, SOCKET l_socket)
 		}
 	}
 }
-
+/*
 void do_ai()
 {
 	using namespace chrono;
@@ -561,7 +595,7 @@ void do_ai()
 			this_thread::sleep_for(start_t + 1s - end_t);
 	}
 }
-
+*/
 void do_timer()
 {
 	using namespace chrono;
@@ -574,7 +608,7 @@ void do_timer()
 			timer_queue.pop();
 			timer_l.unlock();
 			EX_OVER* ex_over = new EX_OVER;
-			ex_over->m_op = OP_RANDO_MOVE;
+			ex_over->m_op = OP_RANDOM_MOVE;
 			PostQueuedCompletionStatus(h_iocp, 1, ev.object, &ex_over->m_over);
 		}
 		else {
@@ -620,7 +654,9 @@ int main()
 			pl.m_state = PLST_INGAME;
 			pl.x = rand() % WORLD_X_SIZE;
 			pl.y = rand() % WORLD_Y_SIZE;
+			pl.is_active = false;
 			// add_event(i, OP_RANDO_MOVE, 1000);
+
 			lua_State* L = pl.L = luaL_newstate();
 			luaL_openlibs(L);
 			luaL_loadfile(L, "npc.lua");
