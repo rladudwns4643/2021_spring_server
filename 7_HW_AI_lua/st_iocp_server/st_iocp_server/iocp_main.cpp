@@ -79,10 +79,7 @@ bool CAS(volatile atomic_bool* addr, int before, int after) {
 void add_event(int obj, OP_TYPE ev_t, int delay_ms)
 {
 	using namespace chrono;
-	TIMER_EVENT ev;
-	ev.e_type = ev_t;
-	ev.object = obj;
-	ev.start_time = system_clock::now() + milliseconds(delay_ms);
+	TIMER_EVENT ev{ obj,  ev_t, system_clock::now() + milliseconds(delay_ms) };
 	timer_l.lock();
 	timer_queue.push(ev);
 	timer_l.unlock();
@@ -272,60 +269,63 @@ void do_move(int p_id, DIRECTION dir)
 		}
 	}
 	send_move_packet(p_id, p_id);
-	for (auto pl : new_vl) {
-		if (0 == old_vl.count(pl)) {		// 1. 새로 시야에 들어오는 객체
-			objects[p_id].m_view_lock.lock();
-			objects[p_id].m_view_list.insert(pl);
-			objects[p_id].m_view_lock.unlock();
-			send_add_object(p_id, pl);
 
-			if (false == is_npc(pl)) {
-				objects[pl].m_view_lock.lock();
-				if (0 == objects[pl].m_view_list.count(p_id)) {
-					objects[pl].m_view_list.insert(p_id);
-					objects[pl].m_view_lock.unlock();
-					send_add_object(pl, p_id);
+	{
+		for (auto pl : new_vl) {
+			if (0 == old_vl.count(pl)) {		// 1. 새로 시야에 들어오는 객체
+				objects[p_id].m_view_lock.lock();
+				objects[p_id].m_view_list.insert(pl);
+				objects[p_id].m_view_lock.unlock();
+				send_add_object(p_id, pl);
+
+				if (false == is_npc(pl)) {
+					objects[pl].m_view_lock.lock();
+					if (0 == objects[pl].m_view_list.count(p_id)) {
+						objects[pl].m_view_list.insert(p_id);
+						objects[pl].m_view_lock.unlock();
+						send_add_object(pl, p_id);
+					}
+					else {
+						objects[pl].m_view_lock.unlock();
+						send_move_packet(pl, p_id);
+					}
 				}
-				else {
-					objects[pl].m_view_lock.unlock();
-					send_move_packet(pl, p_id);
+				else wake_up_npc(pl);
+			}
+			else {		// 2. 기존 시야에도 있고 새 시야에도 있는 경우
+				if (false == is_npc(pl)) {
+					objects[pl].m_view_lock.lock();
+					if (0 == objects[pl].m_view_list.count(p_id)) {
+						objects[pl].m_view_list.insert(p_id);
+						objects[pl].m_view_lock.unlock();
+						send_add_object(pl, p_id);
+					}
+					else {
+						objects[pl].m_view_lock.unlock();
+						send_move_packet(pl, p_id);
+					}
 				}
 			}
-			else wake_up_npc(pl);
 		}
-		else {		// 2. 기존 시야에도 있고 새 시야에도 있는 경우
-			if (false == is_npc(pl)) {
-				objects[pl].m_view_lock.lock();
-				if (0 == objects[pl].m_view_list.count(p_id)) {
-					objects[pl].m_view_list.insert(p_id);
-					objects[pl].m_view_lock.unlock();
-					send_add_object(pl, p_id);
-				}
-				else {
-					objects[pl].m_view_lock.unlock();
-					send_move_packet(pl, p_id);
-				}
-			}
-		}
-	}
 
-	for (auto pl : old_vl) {
-		if (0 == new_vl.count(pl)) {
-			// 3. 시야에서 사라진 경우
-			objects[p_id].m_view_lock.lock();
-			objects[p_id].m_view_list.erase(pl);
-			objects[p_id].m_view_lock.unlock();
-			send_remove_object(p_id, pl);
+		for (auto pl : old_vl) {
+			if (0 == new_vl.count(pl)) {
+				// 3. 시야에서 사라진 경우
+				objects[p_id].m_view_lock.lock();
+				objects[p_id].m_view_list.erase(pl);
+				objects[p_id].m_view_lock.unlock();
+				send_remove_object(p_id, pl);
 
-			if (false == is_npc(pl)) {
-				objects[pl].m_view_lock.lock();
-				if (0 != objects[pl].m_view_list.count(p_id)) {
-					objects[pl].m_view_list.erase(p_id);
-					objects[pl].m_view_lock.unlock();
-					send_remove_object(pl, p_id);
-				}
-				else {
-					objects[pl].m_view_lock.unlock();
+				if (false == is_npc(pl)) {
+					objects[pl].m_view_lock.lock();
+					if (0 != objects[pl].m_view_list.count(p_id)) {
+						objects[pl].m_view_list.erase(p_id);
+						objects[pl].m_view_lock.unlock();
+						send_remove_object(pl, p_id);
+					}
+					else {
+						objects[pl].m_view_lock.unlock();
+					}
 				}
 			}
 		}
@@ -405,8 +405,6 @@ void disconnect(int p_id)
 }
 
 void do_npc_random_move(S_OBJECT& npc) {
-	if (npc.is_active == false) return;
-
 	unordered_set<int> old_vl;
 	for (int i = 0; i < NPC_ATTRIB; i++) { //all object -> all user
 		if (PLST_INGAME != objects[i].m_state) continue;
@@ -414,31 +412,18 @@ void do_npc_random_move(S_OBJECT& npc) {
 		old_vl.insert(objects[i].id);
 	}
 
-	int x = npc.x;
-	int y = npc.y;
+	auto& x = npc.x;
+	auto& y = npc.y;
 	switch (rand() % 4) {
-	case 0: {
-		if (x < (WORLD_X_SIZE - 1))x++;
-		break;
+	case 0: if (x < (WORLD_X_SIZE - 1))x++;	break;
+	case 1: if (x > 0)x--;break;
+	case 2: if (y < (WORLD_Y_SIZE - 1))y++; break;
+	case 3:	if (y > 0)y--;	break;
 	}
-	case 1: {
-		if (x > 0)x--;
-		break;
-	}
-	case 2: {
-		if (y < (WORLD_Y_SIZE - 1))y++;
-		break;
-	}
-	case 3: {
-		if (y > 0)y--;
-		break;
-	}
-	}
-	npc.x = x;
-	npc.y = y;
 
 	unordered_set<int> new_vl;
 	for (int i = 0; i < NPC_ATTRIB; i++) { //all object -> all user
+		if (npc.id == i) continue;
 		if (PLST_INGAME != objects[i].m_state) continue;
 		if (can_see(npc.id, objects[i].id) == false) continue;
 		new_vl.insert(objects[i].id);
@@ -561,13 +546,13 @@ void worker(HANDLE h_iocp, SOCKET l_socket)
 			delete ex_over;
 			break;
 		case OP_PLAYER_APPROACH: {
-			objects[key].m_sl.lock();
+			//objects[key].m_sl.lock();
 			int move_player = *reinterpret_cast<int*>(ex_over->m_packetbuf);
 			lua_State* L = objects[key].L;
-			lua_getglobal(L, "player_is_near");
+			lua_getglobal(L, "event_meet_player");
 			lua_pushnumber(L, move_player);
 			lua_pcall(L, 1, 0, 0);
-			objects[key].m_sl.unlock();
+			//objects[key].m_sl.unlock();
 			delete ex_over;
 			break;
 		}
@@ -623,7 +608,7 @@ int API_get_x(lua_State* L) {
 	lua_pop(L, 2);
 	int x = objects[obj_id].x;
 	lua_pushnumber(L, x);
-	return 1;
+	return 0;
 }
 
 int API_get_y(lua_State* L) {
@@ -631,20 +616,27 @@ int API_get_y(lua_State* L) {
 	lua_pop(L, 2);
 	int y = objects[obj_id].y;
 	lua_pushnumber(L, y);
-	return 1;
+	return 0;
 }
 
-int API_send_mess(lua_State* L) {
-	int resiver = lua_tonumber(L, -3);		//p_id
-	int sender = lua_tonumber(L, -2);		//o_id
-	const char* msg = lua_tostring(L, -1);	//msg
+int lua_send_chat_packet(lua_State* L) {
+	int p_id = (int)lua_tointeger(L, -3);
+	int chat_id = (int)lua_tointeger(L, -2);
+	const char* msg = (char*)lua_tostring(L, -1);
 	lua_pop(L, 4);
-	send_chat(resiver, sender, msg);
-	return 1;
+	send_chat(p_id, chat_id, msg);
+	return 0;
 }
 
-int main()
-{
+int lua_add_npc_move_event(lua_State* L) {
+	int mover_id = (int)lua_tonumber(L, -1);
+	lua_pop(L, 2);
+
+	wake_up_npc(mover_id);
+	return 0;
+}
+
+void init() {
 	for (int i = 0; i < MAX_USER + 1; ++i) {
 		auto& pl = objects[i];
 		pl.id = i;
@@ -668,9 +660,15 @@ int main()
 
 			lua_register(L, "API_get_x", API_get_x);
 			lua_register(L, "API_get_y", API_get_y);
-			lua_register(L, "API_send_mess", API_send_mess);
+			lua_register(L, "API_send_chat_packet", lua_send_chat_packet);
+			lua_register(L, "API_add_npc_move_event", lua_add_npc_move_event);
 		}
 	}
+}
+
+int main()
+{
+	init();
 
 	WSADATA WSAData;
 	WSAStartup(MAKEWORD(2, 2), &WSAData);
