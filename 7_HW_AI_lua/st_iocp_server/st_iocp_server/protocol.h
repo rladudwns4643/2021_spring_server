@@ -29,7 +29,7 @@ enum DIRECTION  { D_N, D_S, D_W, D_E, D_NO };
 struct c2s_move {
 	unsigned char size;
 	unsigned char type;
-	DIRECTION dir;	
+	DIRECTION dr;	
 	int			move_time;			// 클라이언트에서 패킷을 보낸 시간, 밀리세컨드
 };
 

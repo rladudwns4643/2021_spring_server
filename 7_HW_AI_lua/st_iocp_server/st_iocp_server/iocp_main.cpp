@@ -136,7 +136,6 @@ void send_packet(int p_id, void* p)
 	if (0 != ret) {
 		int err_no = WSAGetLastError();
 		if (WSA_IO_PENDING != err_no) {
-			cout << p_id <<"  "<< p_type;
 			display_error("WSASend : ", WSAGetLastError());
 			disconnect(p_id);
 		}
@@ -237,7 +236,7 @@ void send_chat(int to, int send, const char* msg)
 	p.size = sizeof(s2c_chat);
 	p.type = S2C_CHAT;
 	strcpy_s(p.mess, msg);
-	//cout << p.mess << endl;
+	cout << p.mess << endl;
 	send_packet(to, reinterpret_cast<char*>(&p));
 }
 
@@ -373,7 +372,7 @@ void process_packet(int p_id, unsigned char* p_buf)
 	case C2S_MOVE: {
 		c2s_move* packet = reinterpret_cast<c2s_move*>(p_buf);
 		objects[p_id].move_time = packet->move_time;
-		do_move(p_id, packet->dir);
+		do_move(p_id, packet->dr);
 				 break;
 	}
 	default:
@@ -391,7 +390,7 @@ void disconnect(int p_id)
 	objects[p_id].m_state = PLST_FREE;
 	objects[p_id].m_slock.unlock();
 
-	for (int i = 0; i < MAX_USER; ++i) {
+	for (int i = 0; i < NPC_ATTRIB; ++i) {
 		if (is_npc(objects[i].id) == true) continue;
 		if (p_id == objects[i].id) continue;
 		objects[i].m_slock.lock();
@@ -407,7 +406,7 @@ void disconnect(int p_id)
 
 void do_npc_random_move(S_OBJECT& npc) {
 	unordered_set<int> old_vl;
-	for (int i = 0; i < MAX_USER; i++) { //all object -> all user
+	for (int i = 0; i < NPC_ATTRIB; i++) { //all object -> all user
 		if (PLST_INGAME != objects[i].m_state) continue;
 		if (can_see(npc.id, objects[i].id) == false) continue;
 		old_vl.insert(objects[i].id);
@@ -423,7 +422,7 @@ void do_npc_random_move(S_OBJECT& npc) {
 	}
 
 	unordered_set<int> new_vl;
-	for (int i = 0; i < MAX_USER; i++) { //all object -> all user
+	for (int i = 0; i < NPC_ATTRIB; i++) { //all object -> all user
 		if (npc.id == i) continue;
 		if (PLST_INGAME != objects[i].m_state) continue;
 		if (can_see(npc.id, objects[i].id) == false) continue;
@@ -432,7 +431,6 @@ void do_npc_random_move(S_OBJECT& npc) {
 
 	//새로 추가된 객체
 	for (auto pl : new_vl) {
-		if (is_npc(pl) == true) continue;
 		if (old_vl.count(pl) == 0) {
 			//플레이어의 시야에 등장
 			objects[pl].m_view_lock.lock();
@@ -534,7 +532,7 @@ void worker(HANDLE h_iocp, SOCKET l_socket)
 		case OP_RANDOM_MOVE: {
 			bool is_alive = false;
 			do_npc_random_move(objects[key]);
-			for (int i = 0; i < MAX_USER; ++i) {
+			for (int i = 0; i < NPC_ATTRIB; ++i) {
 				if (can_see(key, i) == true) {
 					is_alive = true;
 				}
@@ -548,13 +546,13 @@ void worker(HANDLE h_iocp, SOCKET l_socket)
 			delete ex_over;
 			break;
 		case OP_PLAYER_APPROACH: {
-			objects[key].m_sl.lock();
+			//objects[key].m_sl.lock();
 			int move_player = *reinterpret_cast<int*>(ex_over->m_packetbuf);
 			lua_State* L = objects[key].L;
 			lua_getglobal(L, "event_meet_player");
 			lua_pushnumber(L, move_player);
 			lua_pcall(L, 1, 0, 0);
-			objects[key].m_sl.unlock();
+			//objects[key].m_sl.unlock();
 			delete ex_over;
 			break;
 		}
@@ -666,7 +664,6 @@ void init() {
 			lua_register(L, "API_add_npc_move_event", lua_add_npc_move_event);
 		}
 	}
-	cout << "~init" << endl;
 }
 
 int main()
@@ -702,7 +699,7 @@ int main()
 	}
 
 	vector <thread> worker_threads;
-	for (int i = 0; i < 6; ++i)
+	for (int i = 0; i < 4; ++i)
 		worker_threads.emplace_back(worker, h_iocp, listenSocket);
 
 	//thread ai_thread{ do_ai };
