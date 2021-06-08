@@ -5,22 +5,23 @@
 #include <mutex>
 #include <array>
 #include <queue>
-using namespace std;
 #include <WS2tcpip.h>
 #include <MSWSock.h>
-#pragma comment(lib, "Ws2_32.lib")
-#pragma comment(lib, "MSWSock.lib")
-#include "protocol.h"
+using namespace std;
+
 extern "C" { //C로 정의된 라이브러리인것을 명시(컴파일러에게 알려줌)
 #include "include/lua.h"
 #include "include/lauxlib.h"
 #include "include/lualib.h"
 };
 
+#pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "MSWSock.lib")
 #pragma comment(lib, "lua54.lib")
 
+#include "protocol.h"
 
-enum OP_TYPE { OP_RECV, OP_SEND, OP_ACCEPT, OP_RANDO_MOVE, OP_ATTACK, OP_PLAYER_APPROACH };
+enum OP_TYPE  { OP_RECV, OP_SEND, OP_ACCEPT, OP_RANDO_MOVE, OP_ATTACK, OP_PLAYER_APPRAOCH };
 struct EX_OVER
 {
 	WSAOVERLAPPED	m_over;
@@ -119,7 +120,7 @@ bool can_see(int id_a, int id_b)
 		VIEW_RADIUS >= abs(objects[id_a].y - objects[id_b].y);
 }
 
-void send_packet(int p_id, void* p)
+void send_packet(int p_id, void *p)
 {
 	int p_size = reinterpret_cast<unsigned char*>(p)[0];
 	int p_type = reinterpret_cast<unsigned char*>(p)[1];
@@ -129,9 +130,9 @@ void send_packet(int p_id, void* p)
 	s_over->m_op = OP_SEND;
 	memset(&s_over->m_over, 0, sizeof(s_over->m_over));
 	memcpy(s_over->m_packetbuf, p, p_size);
-	s_over->m_wsabuf[0].buf = reinterpret_cast<CHAR*>(s_over->m_packetbuf);
+	s_over->m_wsabuf[0].buf = reinterpret_cast<CHAR *>(s_over->m_packetbuf);
 	s_over->m_wsabuf[0].len = p_size;
-	int ret = WSASend(objects[p_id].m_socket, s_over->m_wsabuf, 1,
+	int ret = WSASend(objects[p_id].m_socket, s_over->m_wsabuf, 1, 
 		NULL, 0, &s_over->m_over, 0);
 	if (0 != ret) {
 		int err_no = WSAGetLastError();
@@ -147,7 +148,7 @@ void do_recv(int key)
 {
 
 	objects[key].m_recv_over.m_wsabuf[0].buf =
-		reinterpret_cast<char*>(objects[key].m_recv_over.m_packetbuf)
+		reinterpret_cast<char *>(objects[key].m_recv_over.m_packetbuf)
 		+ objects[key].m_prev_size;
 	objects[key].m_recv_over.m_wsabuf[0].len = MAX_BUFFER - objects[key].m_prev_size;
 	memset(&objects[key].m_recv_over.m_over, 0, sizeof(objects[key].m_recv_over.m_over));
@@ -164,7 +165,7 @@ void do_recv(int key)
 int get_new_player_id(SOCKET p_socket)
 {
 	for (int i = SERVER_ID + 1; i <= MAX_USER; ++i) {
-		lock_guard<mutex> lg{ objects[i].m_slock };
+		lock_guard<mutex> lg { objects[i].m_slock };
 		if (PLST_FREE == objects[i].m_state) {
 			objects[i].m_state = PLST_CONNECTED;
 			objects[i].m_socket = p_socket;
@@ -223,23 +224,23 @@ void send_remove_object(int c_id, int p_id)
 	send_packet(c_id, &p);
 }
 
-void send_chat(int to, int send, const char* msg)
+void send_chat(int to, int send, const char *msg)
 {
 	s2c_chat p;
 	p.id = send;
-	p.size = sizeof(s2c_chat);
+	p.size = sizeof(p);
 	p.type = S2C_CHAT;
 	strcpy_s(p.mess, msg);
-	cout << p.mess << endl;
+	cout << "SEND CHAT" << endl;
 	send_packet(to, reinterpret_cast<char*>(&p));
 }
 
 void do_move(int p_id, DIRECTION dir)
 {
-	auto& x = objects[p_id].x;
-	auto& y = objects[p_id].y;
+	auto &x = objects[p_id].x;
+	auto &y = objects[p_id].y;
 	switch (dir) {
-	case D_N: if (y > 0) y--; break;
+	case D_N: if (y> 0) y--; break;
 	case D_S: if (y < (WORLD_Y_SIZE - 1)) y++; break;
 	case D_W: if (x > 0) x--; break;
 	case D_E: if (x < (WORLD_X_SIZE - 1)) x++; break;
@@ -255,7 +256,7 @@ void do_move(int p_id, DIRECTION dir)
 			new_vl.insert(pl.id);
 			if (is_npc(pl.id) == true) {
 				EX_OVER* ex_over = new EX_OVER;
-				ex_over->m_op = OP_PLAYER_APPROACH;
+				ex_over->m_op = OP_PLAYER_APPRAOCH;
 				*reinterpret_cast<int*>(ex_over->m_packetbuf) = p_id;
 				PostQueuedCompletionStatus(h_iocp, 1, pl.id, &ex_over->m_over);
 				//add_event(pl.id, OP_PLAYER_APPRAOCH, 10);
@@ -360,13 +361,13 @@ void process_packet(int p_id, unsigned char* p_buf)
 
 
 	}
-				  break;
+		break;
 	case C2S_MOVE: {
 		c2s_move* packet = reinterpret_cast<c2s_move*>(p_buf);
 		objects[p_id].move_time = packet->move_time;
 		do_move(p_id, packet->dr);
 	}
-				 break;
+		break;
 	default:
 		cout << "Unknown Packet Type from Client[" << p_id;
 		cout << "] Packet Type [" << p_buf[1] << "]";
@@ -517,7 +518,7 @@ void worker(HANDLE h_iocp, SOCKET l_socket)
 			AcceptEx(l_socket, c_socket,
 				ex_over->m_packetbuf, 0, 32, 32, NULL, &ex_over->m_over);
 		}
-					  break;
+			break;
 		case OP_RANDO_MOVE:
 			do_npc_random_move(objects[key]);
 			add_event(key, OP_RANDO_MOVE, 1000);
@@ -526,7 +527,7 @@ void worker(HANDLE h_iocp, SOCKET l_socket)
 		case OP_ATTACK:
 			delete ex_over;
 			break;
-		case OP_PLAYER_APPROACH: {
+		case OP_PLAYER_APPRAOCH: {
 			objects[key].m_sl.lock();
 			int move_player = *reinterpret_cast<int*>(ex_over->m_packetbuf);
 			lua_State* L = objects[key].L;
@@ -568,7 +569,7 @@ void do_timer()
 
 	for (;;) {
 		timer_l.lock();
-		if ((false == timer_queue.empty())
+		if ((false == timer_queue.empty()) 
 			&& (timer_queue.top().start_time <= system_clock::now())) {
 			TIMER_EVENT ev = timer_queue.top();
 			timer_queue.pop();
