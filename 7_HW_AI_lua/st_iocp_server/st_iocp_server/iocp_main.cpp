@@ -4,13 +4,17 @@
 #include <vector>
 #include <mutex>
 #include <array>
-#include <queue>
-using namespace std;
 #include <WS2tcpip.h>
 #include <MSWSock.h>
+#include <queue>
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "MSWSock.lib")
+
 #include "protocol.h"
+using namespace std;
+using namespace chrono;
+
+
 extern "C" { //C로 정의된 라이브러리인것을 명시(컴파일러에게 알려줌)
 #include "include/lua.h"
 #include "include/lauxlib.h"
@@ -18,7 +22,7 @@ extern "C" { //C로 정의된 라이브러리인것을 명시(컴파일러에게 알려줌)
 };
 
 #pragma comment(lib, "lua54.lib")
-
+//#define LOG_ON
 
 enum OP_TYPE { OP_RECV, OP_SEND, OP_ACCEPT, OP_RANDOM_MOVE, OP_ATTACK, OP_PLAYER_APPROACH };
 enum PL_STATE { PLST_FREE, PLST_CONNECTED, PLST_INGAME };
@@ -30,74 +34,57 @@ struct EX_OVER
 	OP_TYPE			m_op;
 	SOCKET			m_csocket;					// OP_ACCEPT에서만 사용
 };
-
-struct TIMER_EVENT {
-	int object;
-	OP_TYPE e_type;
-	chrono::system_clock::time_point start_time;
-	int target_id;
-
-	constexpr bool operator < (const TIMER_EVENT& L) const
-	{
-		return (start_time > L.start_time);
-	}
-};
-
 struct S_OBJECT
 {
 	mutex  m_slock;
-	atomic <PL_STATE> m_state;
+	atomic<PL_STATE> m_state;
 	SOCKET m_socket;
 	int		id;
 
 	EX_OVER m_recv_over;
 	int m_prev_size;
-	atomic_bool	is_active;
 
 	char m_name[200];
 	short	x, y;
-	int		move_time;
-	unordered_set <int> m_view_list;
-	mutex   m_view_lock;
+	unsigned int move_time;
+	atomic_bool is_active;
+
+	unordered_set<int> m_view_list;
+	mutex m_view_lock;
 
 	lua_State* L;
-	mutex m_sl;
+	mutex m_sL;
 };
+struct TIMER_EVENT {
+	int object;				//누가
+	OP_TYPE e_type;			//무엇을
+	system_clock::time_point start_time;		//언제
+	int target_id;
 
-priority_queue <TIMER_EVENT> timer_queue;
-mutex timer_l;
+	constexpr bool operator < (const TIMER_EVENT& lhs) const {
+		return start_time > lhs.start_time;
+	}
+};
+priority_queue<TIMER_EVENT> timer_queue;
+mutex timer_lock;
 
 constexpr int SERVER_ID = 0;
 array <S_OBJECT, MAX_USER + 1> objects;
-
 HANDLE h_iocp;
 
 bool CAS(volatile atomic_bool* addr, int before, int after) {
 	return atomic_compare_exchange_strong(reinterpret_cast<volatile atomic_int*>(addr), &before, after);
 }
 
-void add_event(int obj, OP_TYPE ev_t, int delay_ms)
-{
-	using namespace chrono;
+void add_event(int obj, OP_TYPE ev_t, int delay_ms) {
 	TIMER_EVENT ev{ obj,  ev_t, system_clock::now() + milliseconds(delay_ms) };
-	timer_l.lock();
+	timer_lock.lock();
 	timer_queue.push(ev);
-	timer_l.unlock();
+	timer_lock.unlock();
 }
 
-void wake_up_npc(int npc_id)
-{
-	if (objects[npc_id].is_active == false) {
-		bool old_state = false;
-		if (true == atomic_compare_exchange_strong(&objects[npc_id].is_active,
-			&old_state, true))
-			add_event(npc_id, OP_RANDOM_MOVE, 1000);
-	}
-}
-
-bool is_npc(int id)
-{
-	return id >= NPC_ATTRIB;
+void wake_up_npc(int npc_id) {
+	add_event(npc_id, OP_RANDOM_MOVE, 1000);
 }
 
 void disconnect(int p_id);
@@ -113,18 +100,14 @@ void display_error(const char* msg, int err_no)
 	LocalFree(lpMsgBuf);
 }
 
-bool can_see(int id_a, int id_b)
-{
-	return VIEW_RADIUS >= abs(objects[id_a].x - objects[id_b].x) &&
-		VIEW_RADIUS >= abs(objects[id_a].y - objects[id_b].y);
-}
-
 void send_packet(int p_id, void* p)
 {
 	int p_size = reinterpret_cast<unsigned char*>(p)[0];
 	int p_type = reinterpret_cast<unsigned char*>(p)[1];
-	//cout << "To client [" << p_id << "] : ";
-	//cout << "Packet [" << p_type << "]\n";
+#ifdef LOG_ON
+	cout << "To client [" << p_id << "] : ";
+	cout << "Packet [" << p_type << "]\n";
+#endif
 	EX_OVER* s_over = new EX_OVER;
 	s_over->m_op = OP_SEND;
 	memset(&s_over->m_over, 0, sizeof(s_over->m_over));
@@ -136,12 +119,15 @@ void send_packet(int p_id, void* p)
 	if (0 != ret) {
 		int err_no = WSAGetLastError();
 		if (WSA_IO_PENDING != err_no) {
-			cout << p_id <<"  "<< p_type;
 			display_error("WSASend : ", WSAGetLastError());
 			disconnect(p_id);
 		}
-
 	}
+}
+
+bool is_npc(int id) {
+	if (id >= NPC_ATTRIB) return true;
+	return false;
 }
 
 void do_recv(int key)
@@ -165,10 +151,10 @@ int get_new_player_id(SOCKET p_socket)
 {
 	int idx;
 
-	for (idx = 0; idx < MAX_USER; ++idx) {
+	for (idx = 0; idx < NPC_ATTRIB; ++idx) {
 		if (objects[idx].m_state == PLST_FREE) break;
 	}
-	if (idx == MAX_USER) {
+	if (idx == NPC_ATTRIB) {
 		closesocket(p_socket); //limit new player
 	}
 	else {
@@ -241,6 +227,11 @@ void send_chat(int to, int send, const char* msg)
 	send_packet(to, reinterpret_cast<char*>(&p));
 }
 
+bool can_see(int id_r, int id_l) {
+	return VIEW_RADIUS >= abs(objects[id_r].x - objects[id_l].x)
+		&& VIEW_RADIUS >= abs(objects[id_r].y - objects[id_l].y);
+}
+
 void do_move(int p_id, DIRECTION dir)
 {
 	auto& x = objects[p_id].x;
@@ -251,11 +242,13 @@ void do_move(int p_id, DIRECTION dir)
 	case D_W: if (x > 0) x--; break;
 	case D_E: if (x < (WORLD_X_SIZE - 1)) x++; break;
 	}
-	unordered_set <int> old_vl;
+	send_move_packet(p_id, p_id);
+
+	unordered_set<int> old_vl;
 	objects[p_id].m_view_lock.lock();
 	old_vl = objects[p_id].m_view_list;
 	objects[p_id].m_view_lock.unlock();
-	unordered_set <int> new_vl;
+	unordered_set<int> new_vl;
 	for (auto& pl : objects) {
 		if (pl.id == p_id) continue;
 		if ((pl.m_state == PLST_INGAME) && can_see(p_id, pl.id)) {
@@ -265,68 +258,67 @@ void do_move(int p_id, DIRECTION dir)
 				ex_over->m_op = OP_PLAYER_APPROACH;
 				*reinterpret_cast<int*>(ex_over->m_packetbuf) = p_id;
 				PostQueuedCompletionStatus(h_iocp, 1, pl.id, &ex_over->m_over);
-				//add_event(pl.id, OP_PLAYER_APPRAOCH, 10);
 			}
 		}
 	}
-	send_move_packet(p_id, p_id);
 
-	{
-		for (auto pl : new_vl) {
-			if (0 == old_vl.count(pl)) {		// 1. 새로 시야에 들어오는 객체
-				objects[p_id].m_view_lock.lock();
-				objects[p_id].m_view_list.insert(pl);
-				objects[p_id].m_view_lock.unlock();
-				send_add_object(p_id, pl);
+	for (auto pl : new_vl) {
+		if (0 == old_vl.count(pl)) {      // 1. 새로 시야에 들어오는 경우
+			objects[p_id].m_view_lock.lock();
+			objects[p_id].m_view_list.insert(pl);
+			objects[p_id].m_view_lock.unlock();
+			send_add_object(p_id, pl);
 
-				if (false == is_npc(pl)) {
-					objects[pl].m_view_lock.lock();
-					if (0 == objects[pl].m_view_list.count(p_id)) {
-						objects[pl].m_view_list.insert(p_id);
-						objects[pl].m_view_lock.unlock();
-						send_add_object(pl, p_id);
-					}
-					else {
-						objects[pl].m_view_lock.unlock();
-						send_move_packet(pl, p_id);
-					}
+			if (false == is_npc(pl)) {
+				objects[pl].m_view_lock.lock();
+				if (0 == objects[pl].m_view_list.count(p_id)) {
+					objects[pl].m_view_list.insert(p_id);
+					objects[pl].m_view_lock.unlock();
+					send_add_object(pl, p_id);
 				}
-				else wake_up_npc(pl);
+				else {
+					objects[pl].m_view_lock.unlock();
+					send_move_packet(pl, p_id);
+				}
 			}
-			else {		// 2. 기존 시야에도 있고 새 시야에도 있는 경우
-				if (false == is_npc(pl)) {
-					objects[pl].m_view_lock.lock();
-					if (0 == objects[pl].m_view_list.count(p_id)) {
-						objects[pl].m_view_list.insert(p_id);
-						objects[pl].m_view_lock.unlock();
-						send_add_object(pl, p_id);
-					}
-					else {
-						objects[pl].m_view_lock.unlock();
-						send_move_packet(pl, p_id);
-					}
-				}
+			else { // is_npc(pl) == true
+				wake_up_npc(pl);
 			}
 		}
+		else {                        // 2. 기존 시야에도 있고 새 시야에도 있는 경우
+			if (false == is_npc(pl)) {
+				objects[pl].m_view_lock.lock();
+				if (0 == objects[pl].m_view_list.count(p_id)) {
+					objects[pl].m_view_list.insert(p_id);
+					objects[pl].m_view_lock.unlock();
+					send_add_object(pl, p_id);
+				}
+				else {
+					objects[pl].m_view_lock.unlock();
+					send_move_packet(pl, p_id);
+				}
+				//send_move_packet(pl, p_id);
+			}
+		}
+	}
 
-		for (auto pl : old_vl) {
-			if (0 == new_vl.count(pl)) {
-				// 3. 시야에서 사라진 경우
-				objects[p_id].m_view_lock.lock();
-				objects[p_id].m_view_list.erase(pl);
-				objects[p_id].m_view_lock.unlock();
-				send_remove_object(p_id, pl);
+	for (auto pl : old_vl) {
+		if (0 == new_vl.count(pl)) {
+			// 3. 시야에서 사라진 경우
+			objects[p_id].m_view_lock.lock();
+			objects[p_id].m_view_list.erase(pl);
+			objects[p_id].m_view_lock.unlock();
+			send_remove_object(p_id, pl);
 
-				if (false == is_npc(pl)) {
-					objects[pl].m_view_lock.lock();
-					if (0 != objects[pl].m_view_list.count(p_id)) {
-						objects[pl].m_view_list.erase(p_id);
-						objects[pl].m_view_lock.unlock();
-						send_remove_object(pl, p_id);
-					}
-					else {
-						objects[pl].m_view_lock.unlock();
-					}
+			if (false == is_npc(pl)) {
+				objects[pl].m_view_lock.lock();
+				if (0 != objects[pl].m_view_list.count(p_id)) {
+					objects[pl].m_view_list.erase(p_id);
+					objects[pl].m_view_lock.unlock();
+					send_remove_object(pl, p_id);
+				}
+				else {
+					objects[pl].m_view_lock.unlock();
 				}
 			}
 		}
@@ -355,11 +347,11 @@ void process_packet(int p_id, unsigned char* p_buf)
 						objects[p_id].m_view_list.insert(pl.id);
 						objects[p_id].m_view_lock.unlock();
 						send_add_object(p_id, pl.id);
-						if (false == is_npc(pl.id)) {
+						if (is_npc(pl.id) == false) {
 							objects[pl.id].m_view_lock.lock();
 							objects[pl.id].m_view_list.insert(p_id);
-							objects[pl.id].m_view_lock.unlock();
 							send_add_object(pl.id, p_id);
+							objects[pl.id].m_view_lock.unlock();
 						}
 						else {
 							wake_up_npc(pl.id);
@@ -368,17 +360,20 @@ void process_packet(int p_id, unsigned char* p_buf)
 				}
 			}
 		}
-				  break;
+		break;
 	}
 	case C2S_MOVE: {
 		c2s_move* packet = reinterpret_cast<c2s_move*>(p_buf);
 		objects[p_id].move_time = packet->move_time;
+
 		do_move(p_id, packet->dir);
-				 break;
+		break;
 	}
 	default:
+#ifdef LOG_ON
 		cout << "Unknown Packet Type from Client[" << p_id;
 		cout << "] Packet Type [" << p_buf[1] << "]";
+#endif
 		while (true);
 	}
 }
@@ -391,7 +386,7 @@ void disconnect(int p_id)
 	objects[p_id].m_state = PLST_FREE;
 	objects[p_id].m_slock.unlock();
 
-	for (int i = 0; i < MAX_USER; ++i) {
+	for (int i = 0; i < NPC_ATTRIB; ++i) {  //NPC_ATTRIB -> MAX_USER
 		if (is_npc(objects[i].id) == true) continue;
 		if (p_id == objects[i].id) continue;
 		objects[i].m_slock.lock();
@@ -406,8 +401,10 @@ void disconnect(int p_id)
 }
 
 void do_npc_random_move(S_OBJECT& npc) {
+	if (npc.is_active == false) return;
+
 	unordered_set<int> old_vl;
-	for (int i = 0; i < MAX_USER; i++) { //all object -> all user
+	for (int i = 0; i < NPC_ATTRIB; i++) { //all object -> all user
 		if (PLST_INGAME != objects[i].m_state) continue;
 		if (can_see(npc.id, objects[i].id) == false) continue;
 		old_vl.insert(objects[i].id);
@@ -416,15 +413,14 @@ void do_npc_random_move(S_OBJECT& npc) {
 	auto& x = npc.x;
 	auto& y = npc.y;
 	switch (rand() % 4) {
-	case 0: if (x < (WORLD_X_SIZE - 1))x++;	break;
+	case 0: if (x < (WORLD_X_SIZE - 1))x++; break;
 	case 1: if (x > 0)x--;break;
-	case 2: if (y < (WORLD_Y_SIZE - 1))y++; break;
-	case 3:	if (y > 0)y--;	break;
+	case 2: if (y < (WORLD_Y_SIZE - 1))y++;		break;
+	case 3: if (y > 0)y--;break;
 	}
 
 	unordered_set<int> new_vl;
-	for (int i = 0; i < MAX_USER; i++) { //all object -> all user
-		if (npc.id == i) continue;
+	for (int i = 0; i < NPC_ATTRIB; i++) { //all object -> all user
 		if (PLST_INGAME != objects[i].m_state) continue;
 		if (can_see(npc.id, objects[i].id) == false) continue;
 		new_vl.insert(objects[i].id);
@@ -432,7 +428,6 @@ void do_npc_random_move(S_OBJECT& npc) {
 
 	//새로 추가된 객체
 	for (auto pl : new_vl) {
-		if (is_npc(pl) == true) continue;
 		if (old_vl.count(pl) == 0) {
 			//플레이어의 시야에 등장
 			objects[pl].m_view_lock.lock();
@@ -461,7 +456,7 @@ void do_npc_random_move(S_OBJECT& npc) {
 	}
 }
 
-void worker(HANDLE h_iocp, SOCKET l_socket)
+void do_worker(HANDLE h_iocp, SOCKET l_socket)
 {
 	while (true) {
 		DWORD num_bytes;
@@ -505,7 +500,7 @@ void worker(HANDLE h_iocp, SOCKET l_socket)
 			if (0 != num_data)
 				memcpy(ex_over->m_packetbuf, packet_ptr, num_data);
 			do_recv(key);
-					break;
+			break;
 		}
 		case OP_SEND: {
 			delete ex_over;
@@ -520,21 +515,18 @@ void worker(HANDLE h_iocp, SOCKET l_socket)
 					reinterpret_cast<HANDLE>(objects[c_id].m_socket), h_iocp, c_id, 0);
 				do_recv(c_id);
 			}
-			else {
-				closesocket(objects[c_id].m_socket);
-			}
+			else closesocket(objects[c_id].m_socket);
 
 			memset(&ex_over->m_over, 0, sizeof(ex_over->m_over));
 			SOCKET c_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 			ex_over->m_csocket = c_socket;
-			AcceptEx(l_socket, c_socket,
-				ex_over->m_packetbuf, 0, 32, 32, NULL, &ex_over->m_over);
+			AcceptEx(l_socket, c_socket, ex_over->m_packetbuf, 0, 32, 32, NULL, &ex_over->m_over);
 			break;
 		}
 		case OP_RANDOM_MOVE: {
 			bool is_alive = false;
 			do_npc_random_move(objects[key]);
-			for (int i = 0; i < MAX_USER; ++i) {
+			for (int i = 0; i < NPC_ATTRIB; ++i) {
 				if (can_see(key, i) == true) {
 					is_alive = true;
 				}
@@ -544,62 +536,38 @@ void worker(HANDLE h_iocp, SOCKET l_socket)
 			delete ex_over;
 			break;
 		}
-		case OP_ATTACK:
-			delete ex_over;
-			break;
+		case OP_ATTACK: break;
 		case OP_PLAYER_APPROACH: {
-			objects[key].m_sl.lock();
 			int move_player = *reinterpret_cast<int*>(ex_over->m_packetbuf);
+			objects[key].m_sL.lock();
 			lua_State* L = objects[key].L;
 			lua_getglobal(L, "event_meet_player");
 			lua_pushnumber(L, move_player);
 			lua_pcall(L, 1, 0, 0);
-			objects[key].m_sl.unlock();
+			objects[key].m_sL.unlock();
 			delete ex_over;
 			break;
 		}
 		}
 	}
 }
-/*
-void do_ai()
-{
+
+void do_timer() {
 	using namespace chrono;
 
-	for (;;) {
-		auto start_t = chrono::system_clock::now();
-		for (auto& npc : objects) {
-			if (true == is_npc(npc.id)) {
-				do_npc_random_move(npc);
-			}
-		}
-		auto end_t = chrono::system_clock::now();
-		auto ai_time = end_t - start_t;
-		cout << "AI Exec Time : "
-			<< duration_cast<milliseconds>(ai_time).count()
-			<< "ms.\n";
-		if (end_t < start_t + 1s)
-			this_thread::sleep_for(start_t + 1s - end_t);
-	}
-}
-*/
-void do_timer()
-{
-	using namespace chrono;
-
-	for (;;) {
-		timer_l.lock();
-		if ((false == timer_queue.empty())
-			&& (timer_queue.top().start_time <= system_clock::now())) {
-			TIMER_EVENT ev = timer_queue.top();
+	while (1) {
+		timer_lock.lock();
+		if ((timer_queue.empty() == false) && timer_queue.top().start_time < system_clock::now()) {
+			TIMER_EVENT ev{ timer_queue.top() };
 			timer_queue.pop();
-			timer_l.unlock();
+			timer_lock.unlock();
 			EX_OVER* ex_over = new EX_OVER;
+			ex_over->m_op = ev.e_type;
 			ex_over->m_op = OP_RANDOM_MOVE;
 			PostQueuedCompletionStatus(h_iocp, 1, ev.object, &ex_over->m_over);
 		}
 		else {
-			timer_l.unlock();
+			timer_lock.unlock();
 			this_thread::sleep_for(10ms);
 		}
 	}
@@ -633,7 +601,7 @@ int lua_send_chat_packet(lua_State* L) {
 int lua_add_npc_move_event(lua_State* L) {
 	int mover_id = (int)lua_tonumber(L, -1);
 	lua_pop(L, 2);
-
+	objects[mover_id].is_active = true;
 	wake_up_npc(mover_id);
 	return 0;
 }
@@ -671,7 +639,6 @@ void init() {
 
 int main()
 {
-	init();
 
 	WSADATA WSAData;
 	WSAStartup(MAKEWORD(2, 2), &WSAData);
@@ -687,6 +654,7 @@ int main()
 	serverAddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
 	::bind(listenSocket, (struct sockaddr*)&serverAddr, sizeof(SOCKADDR_IN));
 	listen(listenSocket, SOMAXCONN);
+	init();
 
 	EX_OVER accept_over;
 	accept_over.m_op = OP_ACCEPT;
@@ -703,10 +671,7 @@ int main()
 
 	vector <thread> worker_threads;
 	for (int i = 0; i < 6; ++i)
-		worker_threads.emplace_back(worker, h_iocp, listenSocket);
-
-	//thread ai_thread{ do_ai };
-	//ai_thread.join();
+		worker_threads.emplace_back(do_worker, h_iocp, listenSocket);
 
 	thread timer_thread{ do_timer };
 	timer_thread.join();

@@ -305,7 +305,7 @@ void send_move_packet(DIRECTION dr)
 	c2s_move packet;
 	packet.size = sizeof(packet);
 	packet.type = C2S_MOVE;
-	packet.dr = dr;
+	packet.dir = dr;
 	size_t sent = 0;
 	socket.send(&packet, sizeof(packet), sent);
 }
