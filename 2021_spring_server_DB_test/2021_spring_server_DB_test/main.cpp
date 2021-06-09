@@ -137,7 +137,9 @@ int main() {
                 if (retcode == SQL_SUCCESS || retcode == SQL_SUCCESS_WITH_INFO) {
                     retcode = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
 
-                    retcode = SQLExecDirect(hstmt, (SQLWCHAR*)L"SELECT char_id, char_name, char_level FROM char_table ORDER BY 2, 1, 3", SQL_NTS); //쿼리문 작성
+                    //retcode = SQLExecDirect(hstmt, (SQLWCHAR*)L"SELECT char_id, char_name, char_level FROM char_table ORDER BY 2, 1, 3", SQL_NTS); //쿼리문 작성
+                    retcode = SQLExecDirect(hstmt, (SQLWCHAR*)L"EXEC get_char_hl 10", SQL_NTS); //저장 프로시저(stored Procedure) 로드로 쿼리 사용
+
                     if (retcode == SQL_SUCCESS || retcode == SQL_SUCCESS_WITH_INFO) {
 
                         //변수 형태 등록
