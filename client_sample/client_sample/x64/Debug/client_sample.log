@@ -1,2 +1,0 @@
-﻿  client.cpp
-C:\Users\t1sna\OneDrive\Project\2021_spring_server\2021_spring_server\client_sample\client_sample\client.cpp(22,10): fatal error C1083: 포함 파일을 열 수 없습니다. '..\..\st_iocp_server\st_iocp_server\protocol.h': No such file or directory
