@@ -1,0 +1,149 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="헤더 파일">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="소스 파일\code">
+      <UniqueIdentifier>{54eb5d94-3466-4ef2-b53e-f4609ac9c804}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\code\Thread">
+      <UniqueIdentifier>{3b55470f-7e8c-470e-89fe-dacd2972d7e7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\code\Thread\ThreadHandler">
+      <UniqueIdentifier>{70b0b634-4218-45ba-8469-1ed7750fb0cf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\code\Thread\ThreadInterface">
+      <UniqueIdentifier>{2e2bc250-413c-4f41-8a12-9eb0e9d2d431}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\code\Thread\Timer">
+      <UniqueIdentifier>{1df6a24f-6ffe-46be-b3ab-1b2a51a25b21}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\code\Thread\Worker">
+      <UniqueIdentifier>{36b0ae08-7445-4a76-8c82-8c6a66b5fe8b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\code\Singleton">
+      <UniqueIdentifier>{76bb3ef5-8459-4afc-abb3-52e2edcf9240}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\code\ServerMain">
+      <UniqueIdentifier>{0794bd23-5c59-4b86-9c3e-10726e925211}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\code\GameWorld">
+      <UniqueIdentifier>{dcbe857a-f1cd-4174-9ac4-0f0c9deba424}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\code\GameWorld\World">
+      <UniqueIdentifier>{d21a531c-785d-42ce-aa1c-c32c601b3222}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\code\GameWorld\Map">
+      <UniqueIdentifier>{14470881-3fb9-4aa7-be77-11608971e5cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\code\GameWorld\Player">
+      <UniqueIdentifier>{5674fb70-8075-4794-9766-552b8131bfa9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\lua">
+      <UniqueIdentifier>{d755de22-a6a7-4ee3-8767-e57e48868986}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\DataBase">
+      <UniqueIdentifier>{d0a233a0-8d86-4342-ae2b-73ae8049057f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="TCPSocket.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="ThreadHandler.cpp">
+      <Filter>소스 파일\code\Thread\ThreadHandler</Filter>
+    </ClCompile>
+    <ClCompile Include="TimerThread.cpp">
+      <Filter>소스 파일\code\Thread\Timer</Filter>
+    </ClCompile>
+    <ClCompile Include="WorkerThread.cpp">
+      <Filter>소스 파일\code\Thread\Worker</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerMain.cpp">
+      <Filter>소스 파일\code\ServerMain</Filter>
+    </ClCompile>
+    <ClCompile Include="World.cpp">
+      <Filter>소스 파일\code\GameWorld\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Map.cpp">
+      <Filter>소스 파일\code\GameWorld\Map</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>소스 파일\code\GameWorld\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="DataBase.cpp">
+      <Filter>소스 파일\DataBase</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="server_define.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="2021_server_protocol.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketUtil.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="TCPSocket.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketAddress.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="ThreadHandler.h">
+      <Filter>소스 파일\code\Thread\ThreadHandler</Filter>
+    </ClInclude>
+    <ClInclude Include="Singleton.h">
+      <Filter>소스 파일\code\Singleton</Filter>
+    </ClInclude>
+    <ClInclude Include="ThreadInterface.h">
+      <Filter>소스 파일\code\Thread\ThreadInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="TimerThread.h">
+      <Filter>소스 파일\code\Thread\Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="WorkerThread.h">
+      <Filter>소스 파일\code\Thread\Worker</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerMain.h">
+      <Filter>소스 파일\code\ServerMain</Filter>
+    </ClInclude>
+    <ClInclude Include="extern.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="World.h">
+      <Filter>소스 파일\code\GameWorld\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Map.h">
+      <Filter>소스 파일\code\GameWorld\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>소스 파일\code\GameWorld\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="DataBase.h">
+      <Filter>소스 파일\DataBase</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="NPC.lua">
+      <Filter>소스 파일\lua</Filter>
+    </None>
+  </ItemGroup>
+</Project>
